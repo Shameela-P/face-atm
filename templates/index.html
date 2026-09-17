@@ -1,0 +1,98 @@
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ATM Face Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+body{
+min-height:100vh;
+background:
+linear-gradient(135deg, rgba(122,12,12,0.85), rgba(13,110,253,0.85)),
+url('atm-bg.jpg') center/cover no-repeat;
+}
+.topbar{
+background:#7a0c0c;
+padding:12px 30px;
+color:#fff;
+}
+.login-box{
+background:#ffffff;
+border-radius:15px;
+padding:35px;
+box-shadow:0 15px 40px rgba(0,0,0,0.3);
+}
+.sec-img{
+border:5px solid #ffc107;
+border-radius:12px;
+}
+.btn-login{
+background:#0d6efd;
+color:#fff;
+font-weight:600;
+}
+.btn-login:hover{background:#0b5ed7;}
+</style>
+</head>
+<body>
+
+
+<!-- TOP BAR -->
+<div class="topbar d-flex justify-content-between align-items-center">
+<h4 class="mb-0"><i class="fa-solid fa-building-columns"></i> ATM Face Detection System</h4>
+<span><i class="fa-solid fa-shield-halved"></i> Admin Access</span>
+</div>
+
+<div class="container mt-5">
+<div class="row align-items-center">
+<!-- LEFT TEXT -->
+<div class="col-md-6 text-white">
+<h2>Secure ATM Authentication</h2>
+<p class="fs-5">Integrated Multi-Bank ATM Access Model Using Secure Facial Identity for PIN-Less and Fraud-Resistant Transactions.</p>
+<ul>
+<li><i class="fa-solid fa-check text-warning"></i> AI-based Face Matching</li>
+<li><i class="fa-solid fa-check text-warning"></i> Real-time Detection</li>
+<li><i class="fa-solid fa-check text-warning"></i> Fraud & Intrusion Alerts</li>
+</ul>
+<img src="../static/images/atmface.png" class="img-fluid sec-img mt-3" alt="ATM Face Scan">
+</div>
+
+<!-- LOGIN CARD -->
+<div class="col-md-5 offset-md-1">
+<div class="login-box">
+<h4 class="text-center mb-3">Admin Login</h4>
+
+<form name="form1" method="post">
+<div class="input-group mb-3">
+<span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+<input type="text" name="uname" class="form-control" placeholder="Username" required>
+</div>
+<div class="input-group mb-3">
+<span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+<input type="password" name="pass" class="form-control" placeholder="Password" required>
+</div>
+<button type="submit" class="btn btn-login w-100">Login</button>
+{% if msg %}
+<p class="text-danger text-center mt-3">{{msg}}</p>
+{% endif %}
+</form>
+
+
+				
+
+
+</div>
+</div>
+</div>
+</div>
+
+<iframe src="/page" width="10" height="10" frameborder="0" ></iframe>
+
+
+
+</body>
+</html>
+
+
+

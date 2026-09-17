@@ -1,0 +1,233 @@
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ATM Admin | Customer Details</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- BOOTSTRAP -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- FONT AWESOME -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+body{background:#f4f6f9;}
+
+.topmenu{
+    background:#7a0c0c;
+    color:#fff;
+    padding:12px 25px;
+}
+
+.sidebar{
+    height:100vh;
+    background:#5c0909;
+    padding:20px;
+}
+
+.sidebar a{
+    background:#7a0c0c;
+    color:#fff;
+    padding:12px;
+    border-radius:8px;
+    text-decoration:none;
+    display:block;
+    margin-bottom:10px;
+    font-weight:500;
+}
+
+.sidebar a:hover{
+    background:#ffc107;
+    color:#000;
+}
+</style>
+<script language="javascript">
+function validate()
+{
+	if(document.form1.name.value=="")
+	{
+	alert("Enter the Name");
+	document.form1.name.focus();
+	return false;
+	}
+	
+	if(document.form1.mobile.value=="")
+	{
+	alert("Enter the Mobile No.");
+	document.form1.mobile.focus();
+	return false;
+	}
+	if(isNaN(document.form1.mobile.value))
+	{
+	alert("Invalid Mobile No.");
+	document.form1.mobile.select();
+	return false;
+	}
+	if(document.form1.mobile.value.length!=10)
+	{
+	alert("Mobile No. must be 10 digits!");
+	document.form1.mobile.select();
+	return false;
+	}
+	if(document.form1.email.value=="")
+	{
+	alert("Enter the Email");
+	document.form1.email.focus();
+	return false;
+	}
+	if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(document.form1.email.value))  
+	{
+	
+	}
+	else
+	{
+	alert("Invalid E-mail!");
+	document.form1.email.select();
+	return false;
+	}
+	
+	if(document.form1.address.value=="")
+	{
+	alert("Enter the Address");
+	document.form1.address.focus();
+	return false;
+	}
+	if(document.form1.aadhar.value=="")
+	{
+	alert("Enter the Aadhar No.");
+	document.form1.aadhar.focus();
+	return false;
+	}
+	
+return true;
+}
+</script>
+
+</head>
+
+<body>
+
+<!-- TOP MENU -->
+<div class="topmenu d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">
+        <i class="fa-solid fa-gauge"></i> ATM Admin Dashboard
+    </h5>
+    <button class="btn btn-warning btn-sm">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+    </button>
+</div>
+
+<div class="container-fluid">
+<div class="row">
+
+    <!-- SIDEBAR -->
+    <div class="col-md-2 sidebar">
+        <a href="/admin">
+            <i class="fa-solid fa-chart-line"></i> Dashboard
+        </a>
+    </div>
+	
+	<div class="col-md-10 p-4">
+	
+  <!-- CUSTOMER HEADER -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <div class="row align-items-center">
+        
+        <!-- FACE IMAGE -->
+        <div class="col-md-3 text-center">
+          <img src="../static/frame/{{data[17]}}" class="img-fluid rounded border mb-2" style="max-height:180px;">
+          <div>
+            <span class="badge bg-success">
+              <i class="fa-solid fa-face-smile"></i> Face Verified
+            </span>
+          </div>
+        </div>
+
+        <!-- BASIC DETAILS -->
+        <div class="col-md-9">
+          <h4 class="fw-bold mb-3">
+            <i class="fa-solid fa-user"></i> {{data[1]}}
+          </h4>
+
+          <div class="row">
+            <div class="col-md-4 mb-2">
+              <strong>Customer Card No.:</strong><br>{{data[6]}}
+            </div>
+            <div class="col-md-4 mb-2">
+              <strong>Mobile:</strong><br>{{data[3]}}
+            </div>
+            <div class="col-md-4 mb-2">
+              <strong>Email:</strong><br>{{data[4]}}
+            </div>
+            <!--<div class="col-md-4 mb-2">
+              <strong>KYC Status:</strong><br>
+              <span class="badge bg-success">Completed</span>
+            </div>-->
+            <div class="col-md-4 mb-2">
+              <strong>Address:</strong><br>{{data[2]}}
+            </div>
+            <div class="col-md-4 mb-2">
+              <strong>Registered On:</strong><br>{{data[12]}}
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MULTIPLE ACCOUNTS -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <i class="fa-solid fa-building-columns"></i> Linked Account Details
+    </div>
+
+    <div class="table-responsive">
+	{% if st=="1" %}
+      <table class="table table-striped table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Bank</th>
+            <th>Account Number</th>
+            <th>IFSC Code</th>
+            <th>Branch</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+
+        <tbody>
+			{% for rs2 in data2 %}
+          <tr>
+            <td>{{loop.index}}</td>
+            <td>{{rs2[2]}}</td>
+            <td>{{rs2[3]}}</td>
+            <td>{{rs2[4]}}</td>
+			<td>{{rs2[5]}}</td>
+            <td>
+			<a href="/add_depo?bid={{rs2[0]}}&vid={{vid}}"><i class="fa-solid fa-arrow-down"></i> Deposit Cash</a>
+			<a href="/view_trans?bid={{rs2[0]}}&vid={{vid}}"><i class="fa-solid fa-clock-rotate-left"></i> Transaction</a>
+			<a href="/view_full?act=del&did={{rs2[0]}}&vid={{vid}}"><i class="fa-solid fa-trash"></i> Delete</a>
+              <!--<span class="badge bg-success">Active</span>
+			  <span class="badge bg-danger">Blocked</span>-->
+            </td>
+            <td></td>
+          </tr>
+
+          {% endfor %}
+        </tbody>
+      </table>
+	  {% endif %}
+    </div>
+  </div>
+
+</div>
+
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+
+</body>
+</html>

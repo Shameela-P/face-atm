@@ -1,0 +1,163 @@
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ATM Admin | Customer Details</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- BOOTSTRAP -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- FONT AWESOME -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+body{background:#f4f6f9;}
+
+.topmenu{
+    background:#7a0c0c;
+    color:#fff;
+    padding:12px 25px;
+}
+
+.sidebar{
+    height:100vh;
+    background:#5c0909;
+    padding:20px;
+}
+
+.sidebar a{
+    background:#7a0c0c;
+    color:#fff;
+    padding:12px;
+    border-radius:8px;
+    text-decoration:none;
+    display:block;
+    margin-bottom:10px;
+    font-weight:500;
+}
+
+.sidebar a:hover{
+    background:#ffc107;
+    color:#000;
+}
+</style>
+<script language="javascript">
+function validate()
+{
+	if(document.form1.bank.value=="")
+	{
+	alert("Enter the Bank");
+	document.form1.bank.focus();
+	return false;
+	}
+	
+	if(document.form1.account.value=="")
+	{
+	alert("Enter the Account No.");
+	document.form1.account.focus();
+	return false;
+	}
+	if(isNaN(document.form1.account.value))
+	{
+	alert("Invalid Account No.");
+	document.form1.account.select();
+	return false;
+	}
+	if(document.form1.account.value.length!=10)
+	{
+	alert("Account No. must be 10 digits!");
+	document.form1.account.select();
+	return false;
+	}
+
+	
+	if(document.form1.ifsc_code.value=="")
+	{
+	alert("Enter the IFSC Code");
+	document.form1.ifsc_code.focus();
+	return false;
+	}
+	if(document.form1.branch.value=="")
+	{
+	alert("Enter the Branch");
+	document.form1.branch.focus();
+	return false;
+	}
+	
+return true;
+}
+</script>
+</head>
+
+<body>
+
+<!-- TOP MENU -->
+<div class="topmenu d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">
+        <i class="fa-solid fa-gauge"></i> ATM Admin Dashboard
+    </h5>
+    <button class="btn btn-warning btn-sm">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+    </button>
+</div>
+
+<div class="container-fluid">
+<div class="row">
+
+    <!-- SIDEBAR -->
+    <div class="col-md-2 sidebar">
+        <a href="/admin">
+            <i class="fa-solid fa-chart-line"></i> Dashboard
+        </a>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="col-md-10 p-4">
+
+        <!-- PAGE HEADER -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold mb-0">
+                <i class="fa-solid fa-users"></i> Customer 
+            </h4>
+
+        
+        </div>
+
+        <!-- CUSTOMER TABLE CARD -->
+        <div class="card shadow-sm">
+		{% if msg=="success" %}
+				<span style="color:#00CC33">Deposit Added..</span>
+				<script>
+//Using setTimeout to execute a function after 5 seconds.
+setTimeout(function () {
+   //Redirect with JavaScript
+   window.location.href= '/view_full?vid={{vid}}';
+}, 2000);
+</script>
+				{% endif %}
+				
+<form name="form1" method="post">
+<div class="card p-4 shadow-sm">
+<h5 class="mb-3"><i class="fa-solid fa-user-plus"></i> Deposit Cash</h5>
+<div class="row">
+<div class="col-md-6 mb-3">
+<label>Deposit Amount</label>
+<input type="number" name="amount" class="form-control" placeholder="" required>
+</div>
+
+
+</div>
+<button class="btn btn-primary" type="submit" onClick="return validate()"><i class="fa-solid fa-floppy-disk"></i> Submit</button>
+</div>
+
+<p align="center"><a href="/view_full?vid={{vid}}">Back</a></p>
+</form>
+
+        </div>
+
+    </div>
+</div>
+</div>
+
+</body>
+</html>

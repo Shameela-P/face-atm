@@ -1,0 +1,187 @@
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ATM Admin | Customer Details</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- BOOTSTRAP -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- FONT AWESOME -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+body{background:#f4f6f9;}
+
+.topmenu{
+    background:#7a0c0c;
+    color:#fff;
+    padding:12px 25px;
+}
+
+.sidebar{
+    height:100vh;
+    background:#5c0909;
+    padding:20px;
+}
+
+.sidebar a{
+    background:#7a0c0c;
+    color:#fff;
+    padding:12px;
+    border-radius:8px;
+    text-decoration:none;
+    display:block;
+    margin-bottom:10px;
+    font-weight:500;
+}
+
+.sidebar a:hover{
+    background:#ffc107;
+    color:#000;
+}
+.face-container{
+    width: 500px;
+    height: 500px;
+    overflow-y: auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px;
+    border: 1px dashed #ddd;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.face-img{
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 2px solid #e0e0e0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.face-img:hover{
+    transform: scale(1.05);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+</style>
+<script language="javascript">
+function validate()
+{
+	if(document.form1.name.value=="")
+	{
+	alert("Enter the Name");
+	document.form1.name.focus();
+	return false;
+	}
+	
+	if(document.form1.mobile.value=="")
+	{
+	alert("Enter the Mobile No.");
+	document.form1.mobile.focus();
+	return false;
+	}
+	if(isNaN(document.form1.mobile.value))
+	{
+	alert("Invalid Mobile No.");
+	document.form1.mobile.select();
+	return false;
+	}
+	if(document.form1.mobile.value.length!=10)
+	{
+	alert("Mobile No. must be 10 digits!");
+	document.form1.mobile.select();
+	return false;
+	}
+	if(document.form1.email.value=="")
+	{
+	alert("Enter the Email");
+	document.form1.email.focus();
+	return false;
+	}
+	if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(document.form1.email.value))  
+	{
+	
+	}
+	else
+	{
+	alert("Invalid E-mail!");
+	document.form1.email.select();
+	return false;
+	}
+	
+	if(document.form1.address.value=="")
+	{
+	alert("Enter the Address");
+	document.form1.address.focus();
+	return false;
+	}
+	if(document.form1.aadhar.value=="")
+	{
+	alert("Enter the Aadhar No.");
+	document.form1.aadhar.focus();
+	return false;
+	}
+	
+return true;
+}
+</script>
+
+</head>
+
+<body>
+
+<!-- TOP MENU -->
+<div class="topmenu d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">
+        <i class="fa-solid fa-gauge"></i> ATM Admin Dashboard
+    </h5>
+    <button class="btn btn-warning btn-sm">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+    </button>
+</div>
+
+<div class="container-fluid">
+<div class="row">
+
+    <!-- SIDEBAR -->
+    <div class="col-md-2 sidebar">
+        <a href="/admin">
+            <i class="fa-solid fa-chart-line"></i> Dashboard
+        </a>
+    </div>
+
+    <!-- MAIN CONTENT -->
+	   <div class="col-md-10 p-4">
+	
+		<!-- PAGE HEADER -->
+		<div class="d-flex justify-content-between align-items-center mb-3">
+			<h4 class="fw-bold mb-0 text-primary">
+				<i class="fa-solid fa-camera me-2"></i> Face Captured & Trained
+			</h4>
+		</div>
+	
+		<!-- CUSTOMER TABLE CARD -->
+		<div class="card shadow-sm">
+			<div class="card-body">
+	
+				<!-- IMAGE CONTAINER -->
+				<div class="face-container mx-auto">
+					{% for x in result %}
+						<img src="../static/frame/{{ x[2] }}" class="face-img">
+					{% endfor %}
+				</div>
+	
+			</div>
+		</div>
+	
+	</div>
+</div>
+</div>
+
+</body>
+</html>
