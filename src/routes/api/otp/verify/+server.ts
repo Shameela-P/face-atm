@@ -5,18 +5,18 @@ import { verifyOtp } from '$lib/server/otpStore';
 export const POST: RequestHandler = async ({ request }) => {
     try {
         const body = await request.json();
-        const mobile = body.mobile?.toString().trim();
+        const email = body.email?.toString().trim();
         const otp = body.otp?.toString().trim();
 
-        if (!mobile || !/^[6-9][0-9]{9}$/.test(mobile)) {
-            return json({ success: false, error: 'Mobile number must be a valid 10-digit Indian mobile number.' }, { status: 400 });
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return json({ success: false, error: 'Valid email address is required.' }, { status: 400 });
         }
 
-        if (!otp || !/^[0-9]{4}$/.test(otp)) {
-            return json({ success: false, error: 'OTP must be exactly 4 numeric digits.' }, { status: 400 });
+        if (!otp || !/^[0-9]{6}$/.test(otp)) {
+            return json({ success: false, error: 'OTP must be exactly 6 numeric digits.' }, { status: 400 });
         }
 
-        const res = verifyOtp(mobile, otp);
+        const res = verifyOtp(email, otp);
 
         if (!res.success) {
             return json({ success: false, error: res.error || 'Invalid OTP. Please enter the correct OTP.' }, { status: res.status || 400 });
@@ -24,7 +24,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
         return json({
             success: true,
-            message: 'Mobile number verified successfully.'
+            message: 'Email address verified successfully.'
         });
     } catch (err: any) {
         return json({ success: false, error: 'Server error verifying OTP.' }, { status: 500 });

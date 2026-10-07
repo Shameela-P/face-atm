@@ -1,6 +1,67 @@
 import nodemailer from 'nodemailer';
 import { env } from '$env/dynamic/private';
 
+export async function sendOtpEmail(toEmail: string, otp: string): Promise<{ success: boolean; error?: string }> {
+    const smtpHost = env.SMTP_HOST || 'smtp.gmail.com';
+    const smtpPort = parseInt(env.SMTP_PORT || '587', 10);
+    const smtpUser = env.SMTP_USER || '';
+    const smtpPass = env.SMTP_PASSWORD || env.SMTP_PASS || '';
+
+    if (!smtpUser || !smtpPass || smtpUser.includes('your-email') || smtpPass.includes('your-app-password')) {
+        console.error('[SMTP ERROR] Missing valid SMTP credentials. SMTP_USER and SMTP_PASS must be configured in .env');
+        return { success: false, error: 'Email service is not configured. Please set valid SMTP_USER and SMTP_PASS in .env.' };
+    }
+
+    try {
+        const transporter = nodemailer.createTransport({
+            host: smtpHost,
+            port: smtpPort,
+            secure: smtpPort === 465, // true for 465, false for other ports (587 uses STARTTLS)
+            auth: {
+                user: smtpUser,
+                pass: smtpPass
+            },
+            tls: {
+                rejectUnauthorized: false
+            }
+        });
+
+        const mailOptions = {
+            from: `"SecureATM Registration" <${smtpUser}>`,
+            to: toEmail,
+            subject: "Your OTP Verification Code",
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+                    <div style="background-color: #0ea5e9; color: white; padding: 16px; text-align: center; border-radius: 8px 8px 0 0;">
+                        <h2 style="margin: 0;">SecureATM</h2>
+                    </div>
+                    
+                    <div style="padding: 24px; color: #1e293b; line-height: 1.6; text-align: center;">
+                        <p>Your verification code is:</p>
+                        <h1 style="font-size: 36px; letter-spacing: 8px; color: #0f172a; margin: 20px 0;">${otp}</h1>
+                        <p style="color: #64748b; font-size: 14px;">This code expires in 5 minutes.</p>
+                        <p style="color: #64748b; font-size: 14px;">If you did not request this code, you can safely ignore this email.</p>
+                    </div>
+                </div>
+            `
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`[SMTP EMAIL SUCCESS] OTP dispatched to ${toEmail}. Message ID: ${info.messageId}`);
+        
+        return { success: true };
+    } catch (err: any) {
+        // Log actual reason but NEVER expose credentials
+        const safeError = err.message || err.toString();
+        const secureErrorMessage = safeError.replace(new RegExp(smtpPass, 'g'), '***REDACTED***');
+        
+        console.error(`[SMTP EMAIL ERROR] Failed to send OTP to ${toEmail}:`, secureErrorMessage);
+        
+        return { success: false, error: 'Email delivery failed. Please check the SMTP configuration.' };
+    }
+}
+
+
 export interface SecurityAlertEmailPayload {
     toEmail: string;
     ownerName: string;
@@ -27,8 +88,8 @@ export async function sendSecurityAlertEmail(payload: SecurityAlertEmailPayload)
     console.log(`[SECURITY ALERT EMAIL] Preparing alert for Original Account Owner: ${payload.toEmail} (${payload.ownerName})`);
     console.log(`[SECURITY ALERT DETAILS] Card: ${payload.cardNumber} | Reason: ${payload.failureReason} | Time: ${payload.timestamp}`);
 
-    if (!smtpUser || !smtpPass) {
-        console.warn(`[SECURITY ALERT EMAIL WARNING] SMTP_USER or SMTP_PASSWORD not configured in .env. Email notification logged but not dispatched over network.`);
+    if (!smtpUser || !smtpPass || smtpUser.includes('your-email') || smtpPass.includes('your-app-password')) {
+        console.warn(`[SECURITY ALERT EMAIL WARNING] SMTP_USER or SMTP_PASS not properly configured in .env. Email notification logged but not dispatched over network.`);
         return false;
     }
 
@@ -40,6 +101,9 @@ export async function sendSecurityAlertEmail(payload: SecurityAlertEmailPayload)
             auth: {
                 user: smtpUser,
                 pass: smtpPass
+            },
+            tls: {
+                rejectUnauthorized: false
             }
         });
 
@@ -91,8 +155,10 @@ export async function sendSecurityAlertEmail(payload: SecurityAlertEmailPayload)
         const info = await transporter.sendMail(mailOptions);
         console.log(`[SECURITY ALERT EMAIL SUCCESS] Email dispatched to ${payload.toEmail}. Message ID: ${info.messageId}`);
         return true;
-    } catch (error) {
-        console.error(`[SECURITY ALERT EMAIL ERROR] Failed to send email to ${payload.toEmail}:`, error);
+    } catch (err: any) {
+        const safeError = err.message || err.toString();
+        const secureErrorMessage = safeError.replace(new RegExp(smtpPass, 'g'), '***REDACTED***');
+        console.error(`[SECURITY ALERT EMAIL ERROR] Failed to send email to ${payload.toEmail}:`, secureErrorMessage);
         return false;
     }
 }
@@ -112,8 +178,8 @@ export async function sendCardDeliveryEmail(payload: CardDeliveryEmailPayload): 
     console.log(`[CARD DELIVERY EMAIL] Sending card notification to ${payload.toEmail} (${payload.customerName})`);
     console.log(`[CARD DELIVERY DETAILS] Bank: ${payload.bankName} | Account: ${maskedAcc} | Card: ${payload.cardNumber}`);
 
-    if (!smtpUser || !smtpPass) {
-        console.warn(`[CARD DELIVERY EMAIL NOTICE] SMTP credentials not set in .env. Card notification logged securely.`);
+    if (!smtpUser || !smtpPass || smtpUser.includes('your-email') || smtpPass.includes('your-app-password')) {
+        console.warn(`[CARD DELIVERY EMAIL NOTICE] SMTP_USER or SMTP_PASS not properly configured in .env. Card notification logged securely but not sent.`);
         return false;
     }
 
@@ -122,7 +188,8 @@ export async function sendCardDeliveryEmail(payload: CardDeliveryEmailPayload): 
             host: smtpHost,
             port: smtpPort,
             secure: smtpPort === 465,
-            auth: { user: smtpUser, pass: smtpPass }
+            auth: { user: smtpUser, pass: smtpPass },
+            tls: { rejectUnauthorized: false }
         });
 
         const mailOptions = {
@@ -172,8 +239,10 @@ export async function sendCardDeliveryEmail(payload: CardDeliveryEmailPayload): 
 
         await transporter.sendMail(mailOptions);
         return true;
-    } catch (err) {
-        console.error(`[CARD DELIVERY EMAIL ERROR] Failed to send card delivery email:`, err);
+    } catch (err: any) {
+        const safeError = err.message || err.toString();
+        const secureErrorMessage = safeError.replace(new RegExp(smtpPass, 'g'), '***REDACTED***');
+        console.error(`[CARD DELIVERY EMAIL ERROR] Failed to send card delivery email:`, secureErrorMessage);
         return false;
     }
 }

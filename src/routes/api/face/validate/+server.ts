@@ -18,7 +18,7 @@ export const POST: RequestHandler = async ({ request }) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ image_b64: imageB64 }),
-            signal: AbortSignal.timeout(10000)
+            signal: AbortSignal.timeout(60000)
         });
 
         if (!livenessRes.ok) {
@@ -81,7 +81,7 @@ export const POST: RequestHandler = async ({ request }) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ image_b64: imageB64 }),
-            signal: AbortSignal.timeout(10000)
+            signal: AbortSignal.timeout(60000)
         });
 
         if (!embeddingRes.ok) {
@@ -107,7 +107,7 @@ export const POST: RequestHandler = async ({ request }) => {
         console.error('[Face Validation Error]:', err?.message || err);
         return json({ 
             success: false, 
-            error: 'Face recognition service is currently unavailable. Please start the ML service and try again.' 
+            error: `Face recognition service error: ${err?.message || 'Connection failed'}`
         }, { status: 500 });
     }
 };

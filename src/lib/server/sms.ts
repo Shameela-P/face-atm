@@ -3,6 +3,8 @@ export interface SendSmsResult {
     error?: string;
 }
 
+import { env } from '$env/dynamic/private';
+
 /**
  * Normalizes Indian 10-digit mobile number to E.164 format (+91XXXXXXXXXX)
  */
@@ -23,9 +25,9 @@ export function normalizeMobileToE164(mobile: string): string {
  * Never logs or returns the plaintext OTP.
  */
 export async function sendOtpSms(mobile: string, otp: string): Promise<SendSmsResult> {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const fromPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+    const accountSid = env.TWILIO_ACCOUNT_SID || env.TWILIO_SID;
+    const authToken = env.TWILIO_AUTH_TOKEN;
+    const fromPhoneNumber = env.TWILIO_PHONE_NUMBER;
 
     if (!accountSid || !authToken || !fromPhoneNumber) {
         return {
@@ -43,7 +45,8 @@ export async function sendOtpSms(mobile: string, otp: string): Promise<SendSmsRe
         const params = new URLSearchParams();
         params.append('To', formattedTo);
         params.append('From', fromPhoneNumber);
-        params.append('Body', `SecureATM verification code: ${otp}. This code expires in 5 minutes. Do not share this code.`);
+        // Use Twilio's predefined sms_2fa template for Trial accounts to bypass DLT/Template restrictions
+        params.append('Body', `Your Twilio verification code is ${otp}`);
 
         const response = await fetch(url, {
             method: 'POST',
@@ -56,19 +59,29 @@ export async function sendOtpSms(mobile: string, otp: string): Promise<SendSmsRe
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => null);
-            console.error('[TWILIO SMS ERROR] Unable to deliver OTP SMS.');
+            console.error('[TWILIO SMS ERROR] Unable to deliver OTP SMS:', errorData);
+            
+            let errorMessage = errorData?.message || response.statusText;
+            
+            // Handle Twilio Trial Account Unverified Number Error (21608)
+            if (errorData?.code === 21608) {
+                errorMessage = "This destination number is not verified. Twilio Trial accounts can only send SMS to verified recipient numbers.";
+            } else if (errorMessage.toLowerCase().includes("template")) {
+                errorMessage = "Invalid template name. Trial accounts can only use predefined SMS templates. (Ensure body matches Twilio's sms_2fa exactly).";
+            }
+
             return {
                 success: false,
-                error: errorData?.message || 'Unable to send OTP right now. Please try again later.'
+                error: `Twilio Error: ${errorMessage}`
             };
         }
 
         return { success: true };
     } catch (err: any) {
-        console.error('[SMS SERVICE EXCEPTION] Error connecting to Twilio');
+        console.error('[SMS SERVICE EXCEPTION] Error connecting to Twilio:', err);
         return {
             success: false,
-            error: 'Unable to send OTP right now. Please try again later.'
+            error: `SMS Exception: ${err?.message || err}`
         };
     }
 }
@@ -77,9 +90,9 @@ export async function sendOtpSms(mobile: string, otp: string): Promise<SendSmsRe
  * Sends newly generated ATM card number SMS via Twilio REST API to verified customer mobile.
  */
 export async function sendCardSms(mobile: string, cardNumber: string): Promise<SendSmsResult> {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const fromPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+    const accountSid = env.TWILIO_ACCOUNT_SID || env.TWILIO_SID;
+    const authToken = env.TWILIO_AUTH_TOKEN;
+    const fromPhoneNumber = env.TWILIO_PHONE_NUMBER;
 
     if (!accountSid || !authToken || !fromPhoneNumber) {
         return {
@@ -97,7 +110,7 @@ export async function sendCardSms(mobile: string, cardNumber: string): Promise<S
         const params = new URLSearchParams();
         params.append('To', formattedTo);
         params.append('From', fromPhoneNumber);
-        params.append('Body', `SecureATM: Your ATM card has been successfully generated. Card Number: ${cardNumber}. Please keep your card details secure.`);
+        params.append('Body', `Your account update code is ${cardNumber}`);
 
         const response = await fetch(url, {
             method: 'POST',
@@ -110,19 +123,19 @@ export async function sendCardSms(mobile: string, cardNumber: string): Promise<S
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => null);
-            console.error('[TWILIO CARD SMS ERROR] Failed to send card SMS.');
+            console.error('[TWILIO CARD SMS ERROR] Failed to send card SMS:', errorData);
             return {
                 success: false,
-                error: errorData?.message || 'Failed to deliver card notification SMS.'
+                error: `Twilio Error: ${errorData?.message || response.statusText}`
             };
         }
 
         return { success: true };
     } catch (err: any) {
-        console.error('[SMS SERVICE EXCEPTION] Error connecting to Twilio for card delivery');
+        console.error('[SMS SERVICE EXCEPTION] Error connecting to Twilio for card delivery:', err);
         return {
             success: false,
-            error: 'Failed to communicate with SMS provider for card delivery.'
+            error: `SMS Exception: ${err?.message || err}`
         };
     }
 }

@@ -89,7 +89,7 @@ export async function generateFaceEmbedding(imageB64: string): Promise<{ success
         console.error(`[ML Service Connection Failure] POST ${baseUrl}/api/v1/ml/generate-embedding:`, err?.message || err);
         return { 
             success: false, 
-            error: 'Face recognition service is currently unavailable. Please start the ML service and try again.' 
+            error: `Face recognition service error: ${err?.message || 'Connection failed'}` 
         };
     }
 }
@@ -127,7 +127,7 @@ export async function verifyFaceAuthentication(params: {
         return { 
             success: false, 
             errorCode: 'SERVICE_OFFLINE', 
-            error: 'Face recognition service is currently unavailable. Please start the ML service and try again.' 
+            error: `Face recognition service error: ${err?.message || 'Connection failed'}` 
         };
     }
 }

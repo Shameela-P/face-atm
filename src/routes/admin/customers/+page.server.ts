@@ -15,7 +15,7 @@ import {
 import { generateFaceEmbedding, checkMlServiceHealth } from '$lib/server/mlService';
 import { sendCardDeliveryEmail } from '$lib/server/email';
 import { sendCardSms } from '$lib/server/sms';
-import { isMobileVerified, clearOtp } from '$lib/server/otpStore';
+import { isOtpVerified, clearOtp } from '$lib/server/otpStore';
 
 export const load: PageServerLoad = async () => {
     try {
@@ -84,7 +84,7 @@ export const actions: Actions = {
         const bankName = formData.get('bankName')?.toString().trim();
         const accountNumber = formData.get('accountNumber')?.toString().trim();
         const mobileStr = formData.get('mobile')?.toString().trim();
-        const verifiedMobileStr = formData.get('verifiedMobile')?.toString().trim();
+        const verifiedEmailStr = formData.get('verifiedEmail')?.toString().trim();
         const faceImageB64 = formData.get('faceImageB64')?.toString();
 
         // 1. SPECIFIC Field Validation (Never return generic error when single field missing)
@@ -124,12 +124,12 @@ export const actions: Actions = {
             return fail(400, { error: 'Mobile number must be a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.' });
         }
 
-        if (verifiedMobileStr && mobileStr !== verifiedMobileStr) {
-            return fail(400, { error: 'Mobile number was modified after OTP verification. Please re-verify mobile number.' });
+        if (verifiedEmailStr && email !== verifiedEmailStr) {
+            return fail(400, { error: 'Email address was modified after OTP verification. Please re-verify email address.' });
         }
 
-        if (!isMobileVerified(mobileStr)) {
-            return fail(400, { error: 'Mobile number verification is required.' });
+        if (!isOtpVerified(email)) {
+            return fail(400, { error: 'Email verification is required.' });
         }
 
         // 4. Aadhaar Validation (Exactly 12 numeric digits, numeric only)
@@ -187,8 +187,8 @@ export const actions: Actions = {
                 return fail(400, { error: fbResult.error || 'Failed to complete customer registration in Firebase.' });
             }
 
-            // Clean up OTP store for this mobile
-            clearOtp(mobileStr);
+            // Clean up OTP store for this email
+            clearOtp(email);
 
             // 8. Send ATM Card Number SMS via Twilio to the VERIFIED customer mobile number
             const smsResult = await sendCardSms(mobileStr, fbResult.cardNumber);

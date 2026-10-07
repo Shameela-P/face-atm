@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
 interface OtpRecord {
-    mobile: string;
+    identifier: string;
     otpHash: string;
     createdAt: number;
     expiresAt: number;
@@ -24,16 +24,16 @@ const SECRET_SALT = 'SecureATM_OTP_Salt_2026_x89f';
 // Server-side in-memory OTP store
 const otpMap = new Map<string, OtpRecord>();
 
-function normalizeKey(mobile: string): string {
-    return mobile.replace(/\D/g, '').slice(-10);
+function normalizeKey(identifier: string): string {
+    return identifier.trim().toLowerCase();
 }
 
 function hashOtp(otp: string): string {
     return crypto.createHash('sha256').update(otp + SECRET_SALT).digest('hex');
 }
 
-export function canSendOtp(mobile: string): { allowed: boolean; error?: string; status?: number } {
-    const key = normalizeKey(mobile);
+export function canSendOtp(identifier: string): { allowed: boolean; error?: string; status?: number } {
+    const key = normalizeKey(identifier);
     const now = Date.now();
     const record = otpMap.get(key);
 
@@ -60,8 +60,8 @@ export function canSendOtp(mobile: string): { allowed: boolean; error?: string; 
     return { allowed: true };
 }
 
-export function storeOtp(mobile: string, otp: string): void {
-    const key = normalizeKey(mobile);
+export function storeOtp(identifier: string, otp: string): void {
+    const key = normalizeKey(identifier);
     const now = Date.now();
     const expiresAt = now + OTP_EXPIRY_MS;
     const otpHash = hashOtp(otp);
@@ -73,7 +73,7 @@ export function storeOtp(mobile: string, otp: string): void {
     recentSends.push(now);
 
     otpMap.set(key, {
-        mobile: key,
+        identifier: key,
         otpHash,
         createdAt: now,
         expiresAt,
@@ -84,13 +84,13 @@ export function storeOtp(mobile: string, otp: string): void {
     });
 }
 
-export function verifyOtp(mobile: string, enteredOtp: string): { success: boolean; error?: string; status?: number } {
-    const key = normalizeKey(mobile);
+export function verifyOtp(identifier: string, enteredOtp: string): { success: boolean; error?: string; status?: number } {
+    const key = normalizeKey(identifier);
     const now = Date.now();
     const record = otpMap.get(key);
 
     if (!record || !record.otpHash) {
-        return { success: false, status: 400, error: 'No OTP requested for this mobile number or session expired.' };
+        return { success: false, status: 400, error: 'No OTP requested for this email address or session expired.' };
     }
 
     // 1. Rate limiting for verify requests (Max 10 requests per minute per session)
@@ -132,13 +132,13 @@ export function verifyOtp(mobile: string, enteredOtp: string): { success: boolea
     return { success: true };
 }
 
-export function isMobileVerified(mobile: string): boolean {
-    const key = normalizeKey(mobile);
+export function isOtpVerified(identifier: string): boolean {
+    const key = normalizeKey(identifier);
     const record = otpMap.get(key);
     return Boolean(record && record.verified && Date.now() <= record.expiresAt);
 }
 
-export function clearOtp(mobile: string): void {
-    const key = normalizeKey(mobile);
+export function clearOtp(identifier: string): void {
+    const key = normalizeKey(identifier);
     otpMap.delete(key);
 }

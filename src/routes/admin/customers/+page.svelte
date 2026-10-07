@@ -27,11 +27,11 @@
 	let bankName = $state('');
 	let accountNumber = $state('');
 	let mobileNumber = $state('');
-	let verifiedMobileNumber = $state('');
+	let verifiedEmailAddress = $state('');
 	let otpCode = $state('');
 	let otpSent = $state(false);
-	let mobileVerified = $state(false);
-	let maskedMobileDisplay = $state('');
+	let emailVerified = $state(false);
+	let maskedEmailDisplay = $state('');
 	let otpNotice = $state('');
 	let otpErrorMsg = $state('');
 	let otpTimer = $state(0);
@@ -80,8 +80,8 @@
 	}
 
 	async function handleSendOtp() {
-		if (!/^[6-9][0-9]{9}$/.test(mobileNumber)) {
-			otpErrorMsg = 'Mobile number must be a valid 10-digit Indian mobile number.';
+		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+			otpErrorMsg = 'Please enter a valid email address.';
 			return;
 		}
 		sendingOtp = true;
@@ -91,15 +91,15 @@
 			const res = await fetch('/api/otp/send', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ mobile: mobileNumber })
+				body: JSON.stringify({ email: email })
 			});
 			const resData = await res.json();
 			sendingOtp = false;
 			if (resData.success) {
 				otpSent = true;
 				otpCode = '';
-				maskedMobileDisplay = resData.maskedMobile || `+91******${mobileNumber.slice(-4)}`;
-				otpNotice = resData.message || `OTP sent successfully.`;
+				maskedEmailDisplay = resData.maskedEmail || email;
+				otpNotice = resData.message || `OTP sent to ${maskedEmailDisplay}`;
 				startOtpCountdown(resData.expiresIn || 300);
 			} else {
 				otpErrorMsg = resData.error || 'Failed to send OTP.';
@@ -111,8 +111,8 @@
 	}
 
 	async function handleVerifyOtp() {
-		if (!/^[0-9]{4}$/.test(otpCode)) {
-			otpErrorMsg = 'OTP must be exactly 4 numeric digits.';
+		if (!/^[0-9]{6}$/.test(otpCode)) {
+			otpErrorMsg = 'OTP must be exactly 6 numeric digits.';
 			return;
 		}
 		verifyingOtp = true;
@@ -122,17 +122,17 @@
 			const res = await fetch('/api/otp/verify', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ mobile: mobileNumber, otp: otpCode })
+				body: JSON.stringify({ email: email, otp: otpCode })
 			});
 			const resData = await res.json();
 			verifyingOtp = false;
 			if (resData.success) {
-				mobileVerified = true;
-				verifiedMobileNumber = mobileNumber;
-				otpNotice = '✓ Mobile number verified successfully!';
+				emailVerified = true;
+				verifiedEmailAddress = email;
+				otpNotice = 'Email address verified successfully.';
 				if (otpTimerInterval) clearInterval(otpTimerInterval);
 			} else {
-				otpErrorMsg = resData.error || 'Invalid OTP. Please enter the correct OTP.';
+				otpErrorMsg = resData.error || 'Incorrect OTP. Please try again.';
 			}
 		} catch (e) {
 			verifyingOtp = false;
@@ -165,7 +165,7 @@
 		if (!videoElement) return;
 		capturingFace = true;
 		faceErrorMsg = '';
-		faceStatusStep = 'Checking face...';
+		faceStatusStep = 'Capturing...';
 
 		const canvas = document.createElement('canvas');
 		canvas.width = videoElement.videoWidth || 640;
@@ -195,10 +195,13 @@
 			if (resData.success) {
 				capturedB64 = b64;
 				faceErrorMsg = '';
-				faceStatusStep = 'Live customer verified ✓';
+				faceStatusStep = 'Face verified successfully';
 			} else {
 				capturedB64 = '';
-				faceErrorMsg = resData.error || 'Face verification failed. Please position a single live face.';
+				faceErrorMsg = resData.error || 'Face verification failed.';
+				if (faceErrorMsg.toLowerCase().includes('timeout') || faceErrorMsg.toLowerCase().includes('aborted')) {
+					faceErrorMsg = 'Face verification took too long. Please try again.';
+				}
 				faceStatusStep = '';
 			}
 		} catch (err) {
@@ -219,11 +222,11 @@
 		accountNumber = '';
 		capturedB64 = '';
 		mobileNumber = '';
-		verifiedMobileNumber = '';
+		verifiedEmailAddress = '';
 		otpCode = '';
 		otpSent = false;
-		mobileVerified = false;
-		maskedMobileDisplay = '';
+		emailVerified = false;
+		maskedEmailDisplay = '';
 		otpNotice = '';
 		otpErrorMsg = '';
 		faceErrorMsg = '';
@@ -491,7 +494,7 @@
 				class="space-y-6 overflow-x-hidden"
 			>
 				<input type="hidden" name="faceImageB64" value={capturedB64} />
-				<input type="hidden" name="verifiedMobile" value={verifiedMobileNumber} />
+				<input type="hidden" name="verifiedEmail" value={verifiedEmailAddress} />
 
 				<!-- Customer Official Details Grid (Desktop: 2 columns, Mobile: 1 column) -->
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -504,21 +507,30 @@
 							required 
 							bind:value={fullName}
 							placeholder="e.g. Shameela P" 
-							class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-brand-500 outline-none transition-all" 
+							class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-brand-500 outline-none transition-all text-slate-900 bg-white placeholder-slate-400" 
 						/>
 					</div>
 
 					<div>
-						<label for="email" class="block text-xs font-semibold text-slate-700 mb-1">Email Address *</label>
-						<input 
-							type="email" 
-							id="email" 
-							name="email" 
-							required 
-							bind:value={email}
-							placeholder="e.g. shameela5qts@gmail.com" 
-							class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-brand-500 outline-none transition-all" 
-						/>
+						<label for="mobile" class="block text-xs font-semibold text-slate-700 mb-1">Indian Mobile Number *</label>
+						<div class="relative w-full">
+							<span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">+91</span>
+							<input 
+								type="text" 
+								id="mobile" 
+								name="mobile" 
+								required 
+								maxlength="10"
+								inputmode="numeric"
+								oninput={(e) => { 
+									const val = e.currentTarget.value.replace(/\D/g, ''); 
+									mobileNumber = val; 
+								}}
+								bind:value={mobileNumber}
+								placeholder="Enter 10-digit mobile number" 
+								class="w-full pl-12 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-brand-500 outline-none font-mono text-slate-900 bg-white placeholder-slate-400" 
+							/>
+						</div>
 					</div>
 
 					<!-- Date of Birth with DYNAMIC MAX TODAY DATE -->
@@ -531,7 +543,7 @@
 							required 
 							bind:value={dob}
 							max={data.todayDate || new Date().toISOString().split('T')[0]}
-							class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-brand-500 outline-none transition-all" 
+							class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-brand-500 outline-none transition-all text-slate-900 bg-white" 
 						/>
 					</div>
 
@@ -548,7 +560,7 @@
 							bind:value={aadhaarNumber}
 							oninput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, ''); aadhaarNumber = e.currentTarget.value; }}
 							placeholder="12-digit Aadhaar number" 
-							class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono focus:border-brand-500 outline-none transition-all" 
+							class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono focus:border-brand-500 outline-none transition-all text-slate-900 bg-white placeholder-slate-400" 
 						/>
 					</div>
 
@@ -561,7 +573,7 @@
 							required 
 							bind:value={bankName}
 							placeholder="e.g. Mariyamman Bank / SBI" 
-							class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-brand-500 outline-none transition-all" 
+							class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-brand-500 outline-none transition-all text-slate-900 bg-white placeholder-slate-400" 
 						/>
 					</div>
 
@@ -574,65 +586,60 @@
 							required 
 							bind:value={accountNumber}
 							placeholder="e.g. 2143658709" 
-							class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono focus:border-brand-500 outline-none transition-all" 
+							class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono focus:border-brand-500 outline-none transition-all text-slate-900 bg-white placeholder-slate-400" 
 						/>
 					</div>
 				</div>
 
-				<!-- Mobile Number & Mobile OTP Verification Box -->
+				<!-- Email OTP Verification Box -->
 				<div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5">
 					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-						<label for="mobile" class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-							<PhoneCall class="w-4 h-4 text-brand-600" />
-							Indian Mobile Number Verification * (10 Digits)
+						<label for="email" class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+							<KeyRound class="w-4 h-4 text-brand-600" />
+							Email Verification *
 						</label>
-						{#if mobileVerified}
+						{#if emailVerified}
 							<span class="text-xs font-bold text-emerald-600 flex items-center gap-1 bg-emerald-100 px-3 py-1 rounded-full self-start sm:self-auto">
 								<CheckCircle2 class="w-3.5 h-3.5 text-emerald-600" />
-								Mobile Verified ✓
+								Email Verified ✓
 							</span>
 						{/if}
 					</div>
 
 					<div class="flex flex-col sm:flex-row items-center gap-2">
 						<div class="relative w-full">
-							<span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">+91</span>
 							<input 
-								type="text" 
-								id="mobile" 
-								name="mobile" 
+								type="email" 
+								id="email" 
+								name="email" 
 								required 
-								maxlength="10"
-								inputmode="numeric"
 								oninput={(e) => { 
-									const val = e.currentTarget.value.replace(/\D/g, ''); 
-									mobileNumber = val; 
-									if (mobileVerified && val !== verifiedMobileNumber) {
-										mobileVerified = false;
-										verifiedMobileNumber = '';
+									if (emailVerified && e.currentTarget.value !== verifiedEmailAddress) {
+										emailVerified = false;
+										verifiedEmailAddress = '';
 										otpSent = false;
 										otpCode = '';
 										otpNotice = '';
-										otpErrorMsg = 'Mobile number changed. Please request and verify a new OTP.';
+										otpErrorMsg = 'Email address changed. Please request and verify a new OTP.';
 									}
 								}}
-								bind:value={mobileNumber}
-								readonly={mobileVerified}
-								placeholder="Enter 10-digit mobile number" 
-								class="w-full pl-12 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-brand-500 outline-none read-only:bg-slate-100 read-only:text-slate-600 font-mono" 
+								bind:value={email}
+								readonly={emailVerified}
+								placeholder="e.g. customer@example.com" 
+								class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-brand-500 outline-none read-only:bg-slate-200 read-only:text-slate-600 text-slate-900 bg-white placeholder-slate-400" 
 							/>
 						</div>
 
-						{#if !mobileVerified}
+						{#if !emailVerified}
 							<button 
 								type="button"
 								onclick={handleSendOtp}
-								disabled={sendingOtp || !/^[6-9][0-9]{9}$/.test(mobileNumber)}
+								disabled={sendingOtp || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)}
 								class="w-full sm:w-auto text-xs font-semibold bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl transition-all whitespace-nowrap flex items-center justify-center gap-1.5 shadow-sm"
 							>
 								{#if sendingOtp}
 									<Loader2 class="w-3.5 h-3.5 animate-spin" />
-									Sending...
+									Sending OTP...
 								{:else}
 									<KeyRound class="w-3.5 h-3.5" />
 									{otpSent ? 'Resend OTP' : 'Send OTP'}
@@ -642,32 +649,34 @@
 					</div>
 
 					<!-- OTP Entry Box -->
-					{#if otpSent && !mobileVerified}
+					{#if otpSent && !emailVerified}
 						<div class="mt-4 pt-4 border-t border-slate-200">
 							<div class="flex items-center justify-between text-xs text-slate-500 mb-2">
-								<span>Enter the 4-digit OTP sent to <span class="font-mono font-bold text-slate-800">{maskedMobileDisplay}</span></span>
+								<span>OTP sent to <span class="font-mono font-bold text-slate-800">{maskedEmailDisplay}</span></span>
 								{#if otpTimer > 0}
 									<span class="font-mono font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded">OTP expires in {formatTimer(otpTimer)}</span>
 								{:else}
-									<span class="font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">OTP expired. Request a new OTP.</span>
+									<span class="font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">OTP expired. Please request a new OTP.</span>
 								{/if}
 							</div>
+							<label for="otp" class="block text-xs font-semibold text-slate-700 mb-1">Enter OTP</label>
 							<div class="flex flex-col sm:flex-row items-center gap-2">
 								<input 
 									type="text" 
+									id="otp"
 									name="otp"
-									maxlength="4" 
+									maxlength="6" 
 									inputmode="numeric"
 									bind:value={otpCode}
 									oninput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, ''); otpCode = e.currentTarget.value; }}
-									placeholder="Enter 4-digit OTP" 
-									class="w-full sm:w-64 px-3.5 py-2 rounded-xl border border-slate-200 text-sm font-mono focus:border-brand-500 outline-none tracking-widest text-center text-lg font-bold"
+									placeholder="Enter 6-digit OTP" 
+									class="w-full sm:w-64 px-3.5 py-2 rounded-xl border border-slate-200 text-sm font-mono focus:border-brand-500 outline-none tracking-widest text-center text-lg font-bold text-slate-900 bg-white placeholder-slate-400"
 								/>
 
 								<button 
 									type="button"
 									onclick={handleVerifyOtp}
-									disabled={verifyingOtp || otpCode.length !== 4 || otpTimer === 0}
+									disabled={verifyingOtp || otpCode.length !== 6 || otpTimer === 0}
 									class="w-full sm:w-auto text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl transition-all whitespace-nowrap flex items-center justify-center gap-1.5 shadow-sm"
 								>
 									{#if verifyingOtp}
@@ -719,7 +728,7 @@
 							></video>
 							{#if !cameraActive}
 								<div class="absolute inset-0 flex items-center justify-center text-slate-400 text-xs">
-									Camera Preview Initializing...
+									Initializing camera...
 								</div>
 							{/if}
 							{#if faceStatusStep}
@@ -762,7 +771,7 @@
 										Capture Owner Face
 									{/if}
 								</button>
-								<p class="text-[11px] text-slate-400 mt-2 text-center">Position the account owner in frame and click capture</p>
+								<p class="text-[11px] text-slate-400 mt-2 text-center">Position your face inside the frame</p>
 							{/if}
 						</div>
 					</div>
@@ -774,7 +783,7 @@
 					</button>
 					<button 
 						type="submit" 
-						disabled={loading || !capturedB64 || !mobileVerified}
+						disabled={loading || !capturedB64 || !emailVerified}
 						class="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md shadow-brand-500/20 active:scale-95"
 					>
 						{#if loading}
