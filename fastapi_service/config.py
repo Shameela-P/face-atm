@@ -19,7 +19,7 @@ class Settings:
     # Experimental thresholds (Configurable, non-production hardcode)
     LIVENESS_THRESHOLD: float = float(os.getenv("LIVENESS_THRESHOLD", "0.45"))
     TEXTURE_STD_THRESHOLD: float = float(os.getenv("TEXTURE_STD_THRESHOLD", "12.0"))
-    FACE_DISTANCE_THRESHOLD: float = float(os.getenv("FACE_DISTANCE_THRESHOLD", "0.60"))
+    FACE_DISTANCE_THRESHOLD: float = float(os.getenv("FACE_DISTANCE_THRESHOLD", "1.15"))
     FACE_COSINE_SIMILARITY_THRESHOLD: float = float(os.getenv("FACE_COSINE_SIMILARITY_THRESHOLD", "0.40"))
 
     # Security constraints
