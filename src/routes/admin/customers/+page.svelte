@@ -49,6 +49,7 @@
 	let capturingFace = $state(false);
 	let faceStatusStep = $state('');
 	let faceErrorMsg = $state('');
+	let retryingEmail = $state(false);
 
 	let filteredCustomers = $derived(
 		data.customers.filter((c: any) => 
@@ -479,7 +480,10 @@
 					return async ({ result, update }) => {
 						loading = false;
 						if (result.type === 'success' && result.data?.registrationComplete) {
-							newlyRegisteredCustomer = result.data.customer;
+							newlyRegisteredCustomer = result.data.customer as any;
+							if (newlyRegisteredCustomer) {
+								newlyRegisteredCustomer.emailSuccess = result.data.emailSuccess;
+							}
 							showSuccessModal = true;
 							showRegistrationModal = false;
 							stopCamera();
@@ -860,7 +864,46 @@
 				</div>
 				<div class="flex justify-between items-center pt-1">
 					<span class="text-slate-400">Email Status:</span>
-					<span class="text-slate-300 text-[11px] font-sans">{newlyRegisteredCustomer.emailNotice}</span>
+					<div class="flex items-center gap-2">
+						<span class="{newlyRegisteredCustomer.emailSuccess ? 'text-emerald-400' : 'text-rose-400'} text-[11px] font-sans">
+							{newlyRegisteredCustomer.emailNotice}
+						</span>
+						{#if !newlyRegisteredCustomer.emailSuccess}
+							<form 
+								method="POST" 
+								action="?/retryCardEmail"
+								use:enhance={() => {
+									retryingEmail = true;
+									return async ({ result, update }) => {
+										retryingEmail = false;
+										if (result.type === 'success' && result.data?.success) {
+											newlyRegisteredCustomer.emailSuccess = true;
+											newlyRegisteredCustomer.emailNotice = result.data.message;
+										}
+										await update({ reset: false });
+									};
+								}}
+							>
+								<input type="hidden" name="customerId" value={newlyRegisteredCustomer.id} />
+								<input type="hidden" name="cardNumber" value={newlyRegisteredCustomer.cardNumber} />
+								<input type="hidden" name="email" value={newlyRegisteredCustomer.email} />
+								<input type="hidden" name="customerName" value={newlyRegisteredCustomer.fullName} />
+								<input type="hidden" name="bankName" value={newlyRegisteredCustomer.bankName} />
+								<input type="hidden" name="accountNumber" value={newlyRegisteredCustomer.accountNumber} />
+								<button 
+									type="submit" 
+									disabled={retryingEmail}
+									class="ml-2 px-2 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 rounded text-[10px] font-bold uppercase transition-colors flex items-center gap-1 disabled:opacity-50"
+								>
+									{#if retryingEmail}
+										<Loader2 class="w-3 h-3 animate-spin" />
+									{:else}
+										<RefreshCw class="w-3 h-3" /> Retry
+									{/if}
+								</button>
+							</form>
+						{/if}
+					</div>
 				</div>
 			</div>
 

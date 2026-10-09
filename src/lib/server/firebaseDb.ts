@@ -301,9 +301,8 @@ export async function generateUniqueCardNumber(): Promise<string> {
 
     while (!isUnique && tries < 20) {
         tries++;
-        // 16-digit card number format: 4860 xxxx xxxx xxxx
-        const randomDigits = Math.floor(100000000000 + Math.random() * 900000000000).toString();
-        newCardNumber = '4860' + randomDigits;
+        // 7-digit unique card number (1000000 to 9999999)
+        newCardNumber = Math.floor(1000000 + Math.random() * 9000000).toString();
 
         const checkSnap = await get(child(dbRef, `cards/${newCardNumber}`));
         if (!checkSnap.exists()) {

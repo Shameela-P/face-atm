@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { env } from '$env/dynamic/private';
+import { Resend } from 'resend';
 
 export async function sendOtpEmail(toEmail: string, otp: string): Promise<{ success: boolean; error?: string }> {
     const smtpHost = env.SMTP_HOST || 'smtp.gmail.com';
@@ -163,50 +164,33 @@ export async function sendSecurityAlertEmail(payload: SecurityAlertEmailPayload)
     }
 }
 
-export async function sendCardDeliveryEmail(payload: CardDeliveryEmailPayload): Promise<boolean> {
-    const smtpHost = env.SMTP_HOST || 'smtp.gmail.com';
-    const smtpPort = parseInt(env.SMTP_PORT || '587', 10);
-    const smtpUser = env.SMTP_USER || '';
-    const smtpPass = env.SMTP_PASSWORD || env.SMTP_PASS || '';
+export async function sendCardIssuedEmail(payload: CardDeliveryEmailPayload): Promise<{ success: boolean; error?: string }> {
+    const resendApiKey = env.RESEND_API_KEY;
+    const resendFromEmail = env.RESEND_FROM_EMAIL || 'SecureATM <onboarding@resend.dev>';
 
-    const maskedAcc = payload.accountNumber.length >= 4 
-        ? '********' + payload.accountNumber.slice(-4) 
-        : payload.accountNumber;
-
-    const maskedCard = 'XXXX XXXX XXXX ' + payload.cardNumber.slice(-4);
-
-    console.log(`[CARD DELIVERY EMAIL] Sending card notification to ${payload.toEmail} (${payload.customerName})`);
-    console.log(`[CARD DELIVERY DETAILS] Bank: ${payload.bankName} | Account: ${maskedAcc} | Card: ${payload.cardNumber}`);
-
-    if (!smtpUser || !smtpPass || smtpUser.includes('your-email') || smtpPass.includes('your-app-password')) {
-        console.warn(`[CARD DELIVERY EMAIL NOTICE] SMTP_USER or SMTP_PASS not properly configured in .env. Card notification logged securely but not sent.`);
-        return false;
+    if (!resendApiKey) {
+        console.warn(`[CARD DELIVERY EMAIL NOTICE] RESEND_API_KEY not properly configured in .env.`);
+        return { success: false, error: 'Email service is not configured.' };
     }
 
-    try {
-        const transporter = nodemailer.createTransport({
-            host: smtpHost,
-            port: smtpPort,
-            secure: smtpPort === 465,
-            auth: { user: smtpUser, pass: smtpPass },
-            tls: { rejectUnauthorized: false }
-        });
+    const resend = new Resend(resendApiKey);
 
-        const mailOptions = {
-            from: `"SecureATM Cards Team" <${smtpUser}>`,
-            to: payload.toEmail,
-            subject: `Your Secure ATM Card Registration — ${payload.bankName}`,
+    try {
+        const { data, error } = await resend.emails.send({
+            from: resendFromEmail,
+            to: [payload.toEmail],
+            subject: `Welcome to SecureATM - Your New Card Number`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
                     <div style="background-color: #2563eb; color: white; padding: 16px; text-align: center; border-radius: 8px 8px 0 0;">
                         <h2 style="margin: 0;">Secure ATM Card Registration</h2>
-                        <p style="margin: 4px 0 0 0; font-size: 14px;">Official Account Notification</p>
+                        <p style="margin: 4px 0 0 0; font-size: 14px;">Welcome to SecureATM</p>
                     </div>
                     
                     <div style="padding: 24px; color: #1e293b; line-height: 1.6;">
                         <p>Dear <strong>${payload.customerName}</strong>,</p>
                         
-                        <p>Your Secure ATM account has been successfully registered by Bank Administration.</p>
+                        <p>Your Secure ATM account has been successfully registered.</p>
                         
                         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #f8fafc; border-radius: 8px;">
                             <tr>
@@ -218,16 +202,14 @@ export async function sendCardDeliveryEmail(payload: CardDeliveryEmailPayload): 
                                 <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">${payload.bankName}</td>
                             </tr>
                             <tr>
-                                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #64748b;">Account Number:</td>
-                                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${maskedAcc}</td>
-                            </tr>
-                            <tr>
                                 <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #64748b;">Generated ATM Card Number:</td>
-                                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-family: monospace; font-weight: bold; color: #2563eb;">${maskedCard}</td>
+                                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-family: monospace; font-weight: bold; color: #2563eb; font-size: 18px;">${payload.cardNumber}</td>
                             </tr>
                         </table>
 
-                        <p style="color: #475569; font-size: 14px;">Your original account owner face has been securely linked to your profile for ATM biometric authentication. Please keep your card information secure.</p>
+                        <p>Please visit the ATM interface and enter your issued card number to access your account.</p>
+                        <p style="color: #475569; font-size: 14px;">Note: The card number alone does not authorize a transaction. Your biometric verification is required.</p>
+                        <p style="color: #64748b; font-size: 12px; margin-top: 20px;">If you did not expect this registration, please contact our support team immediately.</p>
                     </div>
 
                     <div style="background-color: #f1f5f9; padding: 12px; text-align: center; font-size: 12px; color: #64748b; border-radius: 0 0 8px 8px;">
@@ -235,14 +217,17 @@ export async function sendCardDeliveryEmail(payload: CardDeliveryEmailPayload): 
                     </div>
                 </div>
             `
-        };
+        });
 
-        await transporter.sendMail(mailOptions);
-        return true;
+        if (error) {
+            console.error('[CARD DELIVERY EMAIL ERROR] Resend API error:', error);
+            return { success: false, error: error.message };
+        }
+
+        console.log(`[CARD DELIVERY EMAIL SUCCESS] Sent to ${payload.toEmail} via Resend. ID: ${data?.id}`);
+        return { success: true };
     } catch (err: any) {
-        const safeError = err.message || err.toString();
-        const secureErrorMessage = safeError.replace(new RegExp(smtpPass, 'g'), '***REDACTED***');
-        console.error(`[CARD DELIVERY EMAIL ERROR] Failed to send card delivery email:`, secureErrorMessage);
-        return false;
+        console.error(`[CARD DELIVERY EMAIL EXCEPTION] Failed to send email to ${payload.toEmail}:`, err);
+        return { success: false, error: err.message || 'Unknown error occurred' };
     }
 }

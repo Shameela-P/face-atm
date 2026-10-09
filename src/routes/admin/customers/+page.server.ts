@@ -13,7 +13,7 @@ import {
     updateCustomerStatusInFirebase 
 } from '$lib/server/firebaseDb';
 import { generateFaceEmbedding, checkMlServiceHealth } from '$lib/server/mlService';
-import { sendCardDeliveryEmail } from '$lib/server/email';
+import { sendCardIssuedEmail } from '$lib/server/email';
 import { sendCardSms } from '$lib/server/sms';
 import { isOtpVerified, clearOtp } from '$lib/server/otpStore';
 
@@ -198,7 +198,7 @@ export const actions: Actions = {
                 : 'Customer registered successfully and ATM card generated, but card SMS delivery failed. Please retry card notification.';
 
             // 9. Send Card Delivery Notification Email to Customer
-            const emailSuccess = await sendCardDeliveryEmail({
+            const emailResult = await sendCardIssuedEmail({
                 toEmail: email,
                 customerName: fullName,
                 bankName,
@@ -206,13 +206,14 @@ export const actions: Actions = {
                 cardNumber: fbResult.cardNumber
             });
 
-            const emailNotice = emailSuccess 
-                ? 'Email delivered to ' + email
-                : 'Card email delivery is pending because email service is not configured.';
+            const emailNotice = emailResult.success 
+                ? 'Email delivery requested to ' + email
+                : 'Failed to send card email: ' + emailResult.error;
 
             return { 
                 success: true, 
                 registrationComplete: true,
+                emailSuccess: emailResult.success,
                 customer: {
                     id: fbResult.customerId,
                     fullName,
@@ -253,6 +254,38 @@ export const actions: Actions = {
         };
     },
 
+    retryCardEmail: async ({ request }) => {
+        const formData = await request.formData();
+        const customerId = formData.get('customerId')?.toString().trim();
+        const cardNumber = formData.get('cardNumber')?.toString().trim();
+        const email = formData.get('email')?.toString().trim();
+        const customerName = formData.get('customerName')?.toString().trim() || 'Customer';
+        const bankName = formData.get('bankName')?.toString().trim() || 'Your Bank';
+        const accountNumber = formData.get('accountNumber')?.toString().trim() || 'N/A';
+
+        if (!customerId || !cardNumber || !email) {
+            return fail(400, { error: 'Customer ID, Card Number, and Email are required.' });
+        }
+
+        const emailResult = await sendCardIssuedEmail({
+            toEmail: email,
+            customerName,
+            bankName,
+            accountNumber,
+            cardNumber
+        });
+
+        if (!emailResult.success) {
+            return fail(400, { error: emailResult.error || 'Failed to resend ATM card email notification.' });
+        }
+
+        return {
+            success: true,
+            emailRetrySuccess: true,
+            message: `Card notification email resent successfully to ${email}.`
+        };
+    },
+
     addBankAccount: async ({ request }) => {
         const formData = await request.formData();
         const customerId = formData.get('customerId')?.toString().trim();
@@ -281,7 +314,7 @@ export const actions: Actions = {
         // Send email with new card details
         const customer = await getCustomerByIdFromFirebase(customerId);
         if (customer && customer.email) {
-            await sendCardDeliveryEmail({
+            await sendCardIssuedEmail({
                 toEmail: customer.email,
                 customerName: customer.fullName || customer.name || 'Customer',
                 bankName,
