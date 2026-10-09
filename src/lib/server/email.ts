@@ -3,33 +3,20 @@ import { env } from '$env/dynamic/private';
 import { Resend } from 'resend';
 
 export async function sendOtpEmail(toEmail: string, otp: string): Promise<{ success: boolean; error?: string }> {
-    const smtpHost = env.SMTP_HOST || 'smtp.gmail.com';
-    const smtpPort = parseInt(env.SMTP_PORT || '587', 10);
-    const smtpUser = env.SMTP_USER || '';
-    const smtpPass = env.SMTP_PASSWORD || env.SMTP_PASS || '';
+    const resendApiKey = env.RESEND_API_KEY;
+    const resendFromEmail = env.OTP_FROM_EMAIL || env.RESEND_FROM_EMAIL || 'SecureATM <onboarding@resend.dev>';
 
-    if (!smtpUser || !smtpPass || smtpUser.includes('your-email') || smtpPass.includes('your-app-password')) {
-        console.error('[SMTP ERROR] Missing valid SMTP credentials. SMTP_USER and SMTP_PASS must be configured in .env');
-        return { success: false, error: 'Email service is not configured. Please set valid SMTP_USER and SMTP_PASS in .env.' };
+    if (!resendApiKey) {
+        console.error('[RESEND OTP ERROR] Missing RESEND_API_KEY in .env');
+        return { success: false, error: 'Email service is not configured. Please set a valid RESEND_API_KEY in .env.' };
     }
 
-    try {
-        const transporter = nodemailer.createTransport({
-            host: smtpHost,
-            port: smtpPort,
-            secure: smtpPort === 465, // true for 465, false for other ports (587 uses STARTTLS)
-            auth: {
-                user: smtpUser,
-                pass: smtpPass
-            },
-            tls: {
-                rejectUnauthorized: false
-            }
-        });
+    const resend = new Resend(resendApiKey);
 
-        const mailOptions = {
-            from: `"SecureATM Registration" <${smtpUser}>`,
-            to: toEmail,
+    try {
+        const { data, error } = await resend.emails.send({
+            from: resendFromEmail,
+            to: [toEmail],
             subject: "Your OTP Verification Code",
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
@@ -45,20 +32,18 @@ export async function sendOtpEmail(toEmail: string, otp: string): Promise<{ succ
                     </div>
                 </div>
             `
-        };
+        });
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log(`[SMTP EMAIL SUCCESS] OTP dispatched to ${toEmail}. Message ID: ${info.messageId}`);
-        
+        if (error) {
+            console.error('[RESEND OTP ERROR] API error:', error);
+            return { success: false, error: error.message };
+        }
+
+        console.log(`[RESEND OTP SUCCESS] OTP dispatched to ${toEmail}. Message ID: ${data?.id}`);
         return { success: true };
     } catch (err: any) {
-        // Log actual reason but NEVER expose credentials
-        const safeError = err.message || err.toString();
-        const secureErrorMessage = safeError.replace(new RegExp(smtpPass, 'g'), '***REDACTED***');
-        
-        console.error(`[SMTP EMAIL ERROR] Failed to send OTP to ${toEmail}:`, secureErrorMessage);
-        
-        return { success: false, error: 'Email delivery failed. Please check the SMTP configuration.' };
+        console.error(`[RESEND OTP ERROR] Failed to send OTP to ${toEmail}:`, err);
+        return { success: false, error: 'Email delivery failed. Please check the email configuration.' };
     }
 }
 

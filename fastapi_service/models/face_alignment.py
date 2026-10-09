@@ -19,7 +19,7 @@ def align_face(img: np.ndarray, keypoints: dict, desired_face_width: int = 160, 
     angle = np.degrees(np.arctan2(dY, dX))
 
     # Center point between eyes
-    eye_center = ((left_eye[0] + right_eye[0]) // 2, (left_eye[1] + right_eye[1]) // 2)
+    eye_center = (float((left_eye[0] + right_eye[0]) / 2.0), float((left_eye[1] + right_eye[1]) / 2.0))
 
     # Get rotation matrix
     M = cv2.getRotationMatrix2D(eye_center, angle, scale=1.0)

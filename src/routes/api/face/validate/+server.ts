@@ -105,9 +105,17 @@ export const POST: RequestHandler = async ({ request }) => {
         });
     } catch (err: any) {
         console.error('[Face Validation Error]:', err?.message || err);
+        
+        let errorMessage = 'An unexpected error occurred.';
+        if (err?.message?.includes('fetch failed') || err?.message?.includes('ECONNREFUSED')) {
+            errorMessage = 'The biometric backend service is currently offline. Please ensure the FastAPI server is running.';
+        } else {
+            errorMessage = `Face recognition service error: ${err?.message || 'Connection failed'}`;
+        }
+        
         return json({ 
             success: false, 
-            error: `Face recognition service error: ${err?.message || 'Connection failed'}`
-        }, { status: 500 });
+            error: errorMessage
+        }, { status: 503 });
     }
 };

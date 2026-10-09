@@ -11,6 +11,8 @@ interface OtpRecord {
     verifyTimestamps: number[];
 }
 
+export const verifiedEmails = new Set<string>();
+
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes validity
 const MAX_VERIFICATION_ATTEMPTS = 30; // Maximum 30 attempts per OTP session
 const SEND_WINDOW_MS = 10 * 60 * 1000; // 10 minutes window

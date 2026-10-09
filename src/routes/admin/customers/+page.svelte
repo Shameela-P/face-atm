@@ -81,7 +81,7 @@
 	}
 
 	async function handleSendOtp() {
-		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+		if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
 			otpErrorMsg = 'Please enter a valid email address.';
 			return;
 		}
@@ -101,7 +101,7 @@
 				otpCode = '';
 				maskedEmailDisplay = resData.maskedEmail || email;
 				otpNotice = resData.message || `OTP sent to ${maskedEmailDisplay}`;
-				startOtpCountdown(resData.expiresIn || 300);
+				startOtpCountdown(resData.expiresIn || 600);
 			} else {
 				otpErrorMsg = resData.error || 'Failed to send OTP.';
 			}
@@ -130,7 +130,7 @@
 			if (resData.success) {
 				emailVerified = true;
 				verifiedEmailAddress = email;
-				otpNotice = 'Email address verified successfully.';
+				otpNotice = 'Email verified successfully.';
 				if (otpTimerInterval) clearInterval(otpTimerInterval);
 			} else {
 				otpErrorMsg = resData.error || 'Incorrect OTP. Please try again.';
@@ -528,7 +528,7 @@
 								inputmode="numeric"
 								oninput={(e) => { 
 									const val = e.currentTarget.value.replace(/\D/g, ''); 
-									mobileNumber = val; 
+									mobileNumber = val;
 								}}
 								bind:value={mobileNumber}
 								placeholder="Enter 10-digit mobile number" 
@@ -599,8 +599,8 @@
 				<div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5">
 					<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
 						<label for="email" class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-							<KeyRound class="w-4 h-4 text-brand-600" />
-							Email Verification *
+							<PhoneCall class="w-4 h-4 text-brand-600" />
+							Email Verification (Resend) *
 						</label>
 						{#if emailVerified}
 							<span class="text-xs font-bold text-emerald-600 flex items-center gap-1 bg-emerald-100 px-3 py-1 rounded-full self-start sm:self-auto">
@@ -617,8 +617,9 @@
 								id="email" 
 								name="email" 
 								required 
-								oninput={(e) => { 
-									if (emailVerified && e.currentTarget.value !== verifiedEmailAddress) {
+								bind:value={email}
+								oninput={() => {
+									if (emailVerified && email !== verifiedEmailAddress) {
 										emailVerified = false;
 										verifiedEmailAddress = '';
 										otpSent = false;
@@ -627,10 +628,9 @@
 										otpErrorMsg = 'Email address changed. Please request and verify a new OTP.';
 									}
 								}}
-								bind:value={email}
 								readonly={emailVerified}
-								placeholder="e.g. customer@example.com" 
-								class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-brand-500 outline-none read-only:bg-slate-200 read-only:text-slate-600 text-slate-900 bg-white placeholder-slate-400" 
+								placeholder="e.g. customer@example.com (Card number will be sent here)" 
+								class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-brand-500 outline-none text-slate-900 bg-white placeholder-slate-400 read-only:bg-slate-200 read-only:text-slate-600" 
 							/>
 						</div>
 
@@ -638,7 +638,7 @@
 							<button 
 								type="button"
 								onclick={handleSendOtp}
-								disabled={sendingOtp || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)}
+								disabled={sendingOtp || !/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)}
 								class="w-full sm:w-auto text-xs font-semibold bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl transition-all whitespace-nowrap flex items-center justify-center gap-1.5 shadow-sm"
 							>
 								{#if sendingOtp}
@@ -855,12 +855,8 @@
 					<span class="text-slate-200">{newlyRegisteredCustomer.email}</span>
 				</div>
 				<div class="flex justify-between items-center border-b border-slate-800 pb-2">
-					<span class="text-slate-400">Verified Mobile:</span>
+					<span class="text-slate-400">Mobile Number:</span>
 					<span class="text-slate-200">+91 {newlyRegisteredCustomer.mobile}</span>
-				</div>
-				<div class="flex justify-between items-center border-b border-slate-800 pb-2">
-					<span class="text-slate-400">Card SMS Status:</span>
-					<span class="text-emerald-300 text-[11px] font-sans">{newlyRegisteredCustomer.cardSmsNotice || 'Delivery attempted'}</span>
 				</div>
 				<div class="flex justify-between items-center pt-1">
 					<span class="text-slate-400">Email Status:</span>

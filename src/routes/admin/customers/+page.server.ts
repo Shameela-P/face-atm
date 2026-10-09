@@ -14,8 +14,7 @@ import {
 } from '$lib/server/firebaseDb';
 import { generateFaceEmbedding, checkMlServiceHealth } from '$lib/server/mlService';
 import { sendCardIssuedEmail } from '$lib/server/email';
-import { sendCardSms } from '$lib/server/sms';
-import { isOtpVerified, clearOtp } from '$lib/server/otpStore';
+import { verifiedEmails } from '$lib/server/otpStore';
 
 export const load: PageServerLoad = async () => {
     try {
@@ -119,7 +118,7 @@ export const actions: Actions = {
             return fail(400, { error: 'Date of birth cannot be a future date.' });
         }
 
-        // 3. Indian Mobile Number Format & Server-Side OTP Verification Check
+        // 3. Indian Mobile Number Format Check
         if (!/^[6-9][0-9]{9}$/.test(mobileStr)) {
             return fail(400, { error: 'Mobile number must be a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.' });
         }
@@ -128,7 +127,7 @@ export const actions: Actions = {
             return fail(400, { error: 'Email address was modified after OTP verification. Please re-verify email address.' });
         }
 
-        if (!isOtpVerified(email)) {
+        if (!verifiedEmails.has(email)) {
             return fail(400, { error: 'Email verification is required.' });
         }
 
@@ -188,14 +187,7 @@ export const actions: Actions = {
             }
 
             // Clean up OTP store for this email
-            clearOtp(email);
-
-            // 8. Send ATM Card Number SMS via Twilio to the VERIFIED customer mobile number
-            const smsResult = await sendCardSms(mobileStr, fbResult.cardNumber);
-
-            const cardSmsNotice = smsResult.success
-                ? `Card number SMS delivered to +91******${mobileStr.slice(-4)} via Twilio.`
-                : 'Customer registered successfully and ATM card generated, but card SMS delivery failed. Please retry card notification.';
+            verifiedEmails.delete(email);
 
             // 9. Send Card Delivery Notification Email to Customer
             const emailResult = await sendCardIssuedEmail({
@@ -223,7 +215,6 @@ export const actions: Actions = {
                     maskedCard: '**** **** **** ' + fbResult.cardNumber.slice(-4),
                     bankName,
                     accountNumber,
-                    cardSmsNotice,
                     emailNotice
                 }
             };
@@ -234,24 +225,7 @@ export const actions: Actions = {
     },
 
     retryCardNotification: async ({ request }) => {
-        const formData = await request.formData();
-        const customerId = formData.get('customerId')?.toString().trim();
-        const cardNumber = formData.get('cardNumber')?.toString().trim();
-        const mobileStr = formData.get('mobile')?.toString().trim();
-
-        if (!customerId || !cardNumber || !mobileStr) {
-            return fail(400, { error: 'Customer ID, Card Number, and Mobile Number are required.' });
-        }
-
-        const smsResult = await sendCardSms(mobileStr, cardNumber);
-        if (!smsResult.success) {
-            return fail(400, { error: smsResult.error || 'Failed to resend ATM card SMS notification.' });
-        }
-
-        return {
-            success: true,
-            message: `Card notification SMS resent successfully to +91******${mobileStr.slice(-4)}.`
-        };
+        return fail(400, { error: 'SMS notification is disabled.' });
     },
 
     retryCardEmail: async ({ request }) => {

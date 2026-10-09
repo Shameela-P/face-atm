@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { canSendOtp, storeOtp } from '$lib/server/otpStore';
 import { sendOtpEmail } from '$lib/server/email';
+import { canSendOtp, storeOtp } from '$lib/server/otpStore';
 import crypto from 'crypto';
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -9,10 +9,10 @@ export const POST: RequestHandler = async ({ request }) => {
         const body = await request.json();
         const email = body.email?.toString().trim();
 
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (!email || !/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
             return json({ 
                 success: false, 
-                error: 'Valid email address is required.' 
+                error: 'A valid email address is required.' 
             }, { status: 400 });
         }
 
@@ -29,7 +29,7 @@ export const POST: RequestHandler = async ({ request }) => {
         const otpNum = crypto.randomInt(0, 1000000);
         const otp = String(otpNum).padStart(6, '0');
 
-        // 3. Attempt sending real Email OTP via Twilio REST API
+        // 3. Attempt sending real Email OTP via Resend API
         const emailResult = await sendOtpEmail(email, otp);
 
         if (!emailResult.success) {
@@ -42,15 +42,16 @@ export const POST: RequestHandler = async ({ request }) => {
         // 4. Store hashed OTP temporarily on server side (5 minute expiry, max 30 attempts)
         storeOtp(email, otp);
 
-        const emailParts = email.split('@');
-        const maskedEmail = `${emailParts[0].substring(0, 2)}******@${emailParts[1]}`;
+        // Mask the email for the response
+        const [localPart, domain] = email.split('@');
+        const maskedLocal = localPart.length > 2 ? localPart.slice(0, 2) + '*'.repeat(localPart.length - 2) : '*'.repeat(localPart.length);
+        const maskedEmail = `${maskedLocal}@${domain}`;
 
-        // MUST NEVER EXPOSE THE OTP IN THE API RESPONSE!
         return json({
             success: true,
             maskedEmail,
             expiresIn: 300,
-            message: `OTP sent successfully.`
+            message: `OTP sent successfully via Email.`
         });
     } catch (err: any) {
         console.error('[SERVER ERROR] /api/otp/send:', err);
