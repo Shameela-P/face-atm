@@ -30,7 +30,7 @@
 	$effect(() => {
 		if (form?.success) {
 			const timer = setTimeout(() => {
-				window.location.href = '/atm/transaction';
+				window.location.href = '/atm';
 			}, 5000);
 			return () => clearTimeout(timer);
 		}
@@ -202,7 +202,7 @@
 				use:enhance={() => {
 					loading = true;
 					return async ({ update }) => {
-						await update();
+						await update({ invalidateAll: false });
 						loading = false;
 						closeModal();
 					};
@@ -288,7 +288,7 @@
 				use:enhance={() => {
 					loading = true;
 					return async ({ update }) => {
-						await update();
+						await update({ invalidateAll: false });
 						loading = false;
 						closeModal();
 					};
