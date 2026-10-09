@@ -1,4 +1,4 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, redirect, isRedirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { getCustomerByIdFromFirebase, processTransactionInFirebase, getTransactionsByCustomerIdFromFirebase } from '$lib/server/firebaseDb';
 
@@ -46,6 +46,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
             transactions
         };
     } catch (e) {
+        if (isRedirect(e)) throw e;
         console.error("Firebase RTDB Error in ATM Transaction Load:", e);
         throw redirect(303, '/atm');
     }
@@ -81,6 +82,10 @@ export const actions: Actions = {
             return fail(400, { error: result.error || 'Withdrawal failed.' });
         }
 
+        cookies.delete('atm_session_uid', { path: '/' });
+        cookies.delete('atm_session_card', { path: '/' });
+        cookies.delete('atm_authenticated', { path: '/' });
+
         return { success: true, message: `Withdrawal of ₹${amount.toLocaleString()} successful! New Balance: ₹${result.newBalance.toLocaleString()}` };
     },
 
@@ -112,6 +117,10 @@ export const actions: Actions = {
         if (!result.success) {
             return fail(400, { error: result.error || 'Deposit failed.' });
         }
+
+        cookies.delete('atm_session_uid', { path: '/' });
+        cookies.delete('atm_session_card', { path: '/' });
+        cookies.delete('atm_authenticated', { path: '/' });
 
         return { success: true, message: `Deposit of ₹${amount.toLocaleString()} successful! New Balance: ₹${result.newBalance.toLocaleString()}` };
     },

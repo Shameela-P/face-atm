@@ -1,6 +1,12 @@
 import { fail, redirect } from '@sveltejs/kit';
-import type { Actions } from './$types';
+import type { Actions, PageServerLoad } from './$types';
 import { getCustomerByCardFromFirebase } from '$lib/server/firebaseDb';
+
+export const load: PageServerLoad = async ({ url }) => {
+    return {
+        successMessage: url.searchParams.get('success') || null
+    };
+};
 
 export const actions = {
     default: async ({ request, cookies }) => {
@@ -18,9 +24,9 @@ export const actions = {
             return fail(400, { error: 'Please enter your 16-digit ATM card number.', cardNumber: rawInput });
         }
 
-        if (!/^\d{16}$/.test(cardNumber)) {
+        if (!/^\d{6,7}$/.test(cardNumber)) {
             console.warn(`[ATM Auth] Rejection: Invalid card number length/format: ${maskedCard}`);
-            return fail(400, { error: 'ATM card number must be exactly 16 digits.', cardNumber: rawInput });
+            return fail(400, { error: 'ATM card number must be exactly 6 or 7 digits.', cardNumber: rawInput });
         }
 
         try {

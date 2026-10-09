@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { CreditCard, ArrowRight, ShieldCheck, AlertCircle, Loader2, Lock, Cpu } from '@lucide/svelte';
+	import { CreditCard, ArrowRight, ShieldCheck, AlertCircle, Loader2, Lock, Cpu, CheckCircle2 } from '@lucide/svelte';
 	
-	let { form } = $props();
+	let { data, form } = $props();
 	let loading = $state(false);
 	let cardNumber = $state(form?.cardNumber || '');
 
 	function formatCardDisplay(val: string) {
-		const clean = val.replace(/\D/g, '').slice(0, 16);
-		return clean.replace(/(\d{4})/g, '$1 ').trim();
+		const clean = val.replace(/\D/g, '').slice(0, 7);
+		return clean;
 	}
 
 	function handleInput(e: Event) {
@@ -56,6 +56,14 @@
 				<p class="text-xs text-slate-400">1:1 Biometric Face Verification will follow card identification</p>
 			</div>
 
+			<!-- Success Feedback -->
+			{#if data.successMessage}
+				<div class="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-start gap-3 text-emerald-400 text-sm animate-in fade-in">
+					<CheckCircle2 class="w-5 h-5 shrink-0 mt-0.5" />
+					<p class="font-medium leading-relaxed text-xs">{data.successMessage}</p>
+				</div>
+			{/if}
+
 			<!-- Error Feedback -->
 			{#if form?.error}
 				<div class="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-start gap-3 text-rose-400 text-sm animate-in fade-in">
@@ -91,8 +99,8 @@
 							value={cardNumber}
 							oninput={handleInput}
 							class="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-xl tracking-widest text-center text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all font-mono shadow-inner"
-							placeholder="4860 0000 0000 0000"
-							maxlength="19"
+							placeholder="1234567"
+							maxlength="7"
 							autocomplete="off"
 						/>
 					</div>
@@ -100,7 +108,7 @@
 
 				<button
 					type="submit"
-					disabled={loading || cardNumber.replace(/\s+/g, '').length < 16}
+					disabled={loading || cardNumber.replace(/\s+/g, '').length < 6}
 					class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-brand-600 to-cyan-600 hover:from-brand-500 hover:to-cyan-500 disabled:opacity-40 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold text-base transition-all shadow-xl shadow-brand-500/20 active:scale-[0.99]"
 				>
 					{#if loading}

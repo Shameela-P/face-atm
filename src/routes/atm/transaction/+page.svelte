@@ -26,6 +26,15 @@
 		if (clean.length < 4) return '**** **** **** ' + clean;
 		return '**** **** **** ' + clean.slice(-4);
 	}
+
+	$effect(() => {
+		if (form?.success) {
+			const timer = setTimeout(() => {
+				window.location.href = '/atm/transaction';
+			}, 5000);
+			return () => clearTimeout(timer);
+		}
+	});
 </script>
 
 <svelte:head>
@@ -74,14 +83,7 @@
 			</div>
 		</div>
 
-		<!-- Alert Banners -->
-		{#if form?.message}
-			<div class="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-400 text-sm font-medium animate-in fade-in">
-				<CheckCircle2 class="w-5 h-5 shrink-0 text-emerald-400" />
-				<p>{form.message}</p>
-			</div>
-		{/if}
-
+		<!-- Form Errors (Not Success) -->
 		{#if form?.error}
 			<div class="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-3 text-rose-400 text-sm font-medium animate-in fade-in">
 				<AlertCircle class="w-5 h-5 shrink-0 text-rose-400" />
@@ -375,6 +377,25 @@
 				<button onclick={closeModal} class="px-5 py-2.5 rounded-xl bg-slate-800 text-white text-xs font-semibold hover:bg-slate-700 transition-colors">
 					Close Statement
 				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Full Screen Success Greeting -->
+{#if form?.success}
+	<div class="fixed inset-0 z-[100] flex flex-col items-center justify-center p-4 bg-slate-950/95 backdrop-blur-xl animate-in fade-in duration-500">
+		<div class="flex flex-col items-center justify-center text-center space-y-6 max-w-lg">
+			<div class="w-24 h-24 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-emerald-400 shadow-[0_0_60px_-15px_rgba(16,185,129,0.5)] animate-bounce">
+				<CheckCircle2 class="w-12 h-12" />
+			</div>
+			<div class="space-y-2">
+				<h2 class="text-3xl font-black text-white tracking-tight">Transaction Successful</h2>
+				<p class="text-lg font-medium text-emerald-400">{form.message}</p>
+			</div>
+			<div class="pt-8 space-y-2">
+				<p class="text-sm font-bold text-slate-300">Thank you for banking with SecureATM!</p>
+				<p class="text-xs text-slate-500 font-mono">Returning to main menu in 5 seconds...</p>
 			</div>
 		</div>
 	</div>
