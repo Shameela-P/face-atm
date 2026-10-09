@@ -65,7 +65,12 @@
 			{/if}
 
 			<!-- Error Feedback -->
-			{#if form?.error}
+			{#if data.errorMessage}
+				<div class="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-start gap-3 text-rose-400 text-sm animate-in fade-in">
+					<AlertCircle class="w-5 h-5 shrink-0 mt-0.5" />
+					<p class="font-medium leading-relaxed text-xs">{data.errorMessage}</p>
+				</div>
+			{:else if form?.error}
 				<div class="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-start gap-3 text-rose-400 text-sm animate-in fade-in">
 					<AlertCircle class="w-5 h-5 shrink-0 mt-0.5" />
 					<p class="font-medium leading-relaxed text-xs">{form.error}</p>

@@ -1,6 +1,7 @@
 import { fail, redirect, isRedirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { getCustomerByIdFromFirebase, processTransactionInFirebase, getTransactionsByCustomerIdFromFirebase } from '$lib/server/firebaseDb';
+import { sendTransactionReceiptEmail } from '$lib/server/email';
 
 export const load: PageServerLoad = async ({ cookies }) => {
     const uidStr = cookies.get('atm_session_uid');
@@ -9,6 +10,9 @@ export const load: PageServerLoad = async ({ cookies }) => {
     if (!uidStr || authenticated !== 'true') {
         throw redirect(303, '/atm');
     }
+
+    const authAmountStr = cookies.get('atm_authorized_amount');
+    const authAmount = authAmountStr ? parseInt(authAmountStr, 10) : null;
 
     try {
         const customer = await getCustomerByIdFromFirebase(uidStr);
@@ -43,7 +47,8 @@ export const load: PageServerLoad = async ({ cookies }) => {
                 branch: customer.branch || 'Main Branch',
                 deposit: (customer.balance ?? 1000).toString()
             }],
-            transactions
+            transactions,
+            authAmount
         };
     } catch (e) {
         if (isRedirect(e)) throw e;
@@ -71,6 +76,14 @@ export const actions: Actions = {
 
         const cardStr = cookies.get('atm_session_card') || customer.cardNumber || '';
 
+        const authAmountStr = cookies.get('atm_authorized_amount');
+        if (authAmountStr) {
+            const authAmount = parseInt(authAmountStr, 10);
+            if (amount !== authAmount) {
+                return fail(403, { error: `You can only withdraw the exact amount authorized by the owner: ₹${authAmount.toLocaleString()}` });
+            }
+        }
+
         const result = await processTransactionInFirebase({
             customerId: uidStr,
             cardNumber: cardStr,
@@ -82,11 +95,25 @@ export const actions: Actions = {
             return fail(400, { error: result.error || 'Withdrawal failed.' });
         }
 
+        // Send Transaction Receipt Email
+        await sendTransactionReceiptEmail({
+            toEmail: customer.email || '',
+            ownerName: customer.fullName || customer.name || 'Customer',
+            transactionId: 'TXN_' + Date.now(),
+            type: 'WITHDRAWAL',
+            amount,
+            balance: result.newBalance,
+            timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+            cardNumber: cardStr
+        });
+
         cookies.delete('atm_session_uid', { path: '/' });
         cookies.delete('atm_session_card', { path: '/' });
         cookies.delete('atm_authenticated', { path: '/' });
+        cookies.delete('atm_authorized_amount', { path: '/' });
+        cookies.delete('atm_authorized_token', { path: '/' });
 
-        return { success: true, message: `Withdrawal of ₹${amount.toLocaleString()} successful! New Balance: ₹${result.newBalance.toLocaleString()}` };
+        return { success: true, message: `Withdrawal Successful! Thank you for using SecureATM. Have a great day!` };
     },
 
     deposit: async ({ request, cookies }) => {
@@ -107,6 +134,14 @@ export const actions: Actions = {
 
         const cardStr = cookies.get('atm_session_card') || customer.cardNumber || '';
 
+        const authAmountStr = cookies.get('atm_authorized_amount');
+        if (authAmountStr) {
+            const authAmount = parseInt(authAmountStr, 10);
+            if (amount !== authAmount) {
+                return fail(403, { error: `You can only deposit the exact amount authorized by the owner: ₹${authAmount.toLocaleString()}` });
+            }
+        }
+
         const result = await processTransactionInFirebase({
             customerId: uidStr,
             cardNumber: cardStr,
@@ -118,17 +153,33 @@ export const actions: Actions = {
             return fail(400, { error: result.error || 'Deposit failed.' });
         }
 
+        // Send Transaction Receipt Email
+        await sendTransactionReceiptEmail({
+            toEmail: customer.email || '',
+            ownerName: customer.fullName || customer.name || 'Customer',
+            transactionId: 'TXN_' + Date.now(),
+            type: 'DEPOSIT',
+            amount,
+            balance: result.newBalance,
+            timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+            cardNumber: cardStr
+        });
+
         cookies.delete('atm_session_uid', { path: '/' });
         cookies.delete('atm_session_card', { path: '/' });
         cookies.delete('atm_authenticated', { path: '/' });
+        cookies.delete('atm_authorized_amount', { path: '/' });
+        cookies.delete('atm_authorized_token', { path: '/' });
 
-        return { success: true, message: `Deposit of ₹${amount.toLocaleString()} successful! New Balance: ₹${result.newBalance.toLocaleString()}` };
+        return { success: true, message: `Deposit Successful! Thank you for using SecureATM. Have a great day!` };
     },
 
     logout: async ({ cookies }) => {
         cookies.delete('atm_session_uid', { path: '/' });
         cookies.delete('atm_session_card', { path: '/' });
         cookies.delete('atm_authenticated', { path: '/' });
+        cookies.delete('atm_authorized_amount', { path: '/' });
+        cookies.delete('atm_authorized_token', { path: '/' });
         throw redirect(303, '/atm');
     }
 };

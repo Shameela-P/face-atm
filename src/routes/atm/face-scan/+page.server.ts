@@ -1,8 +1,9 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import { sendSecurityAlertEmail } from '$lib/server/email';
+import { sendSecurityAlertEmail, sendMismatchApprovalEmail } from '$lib/server/email';
 import { uploadImageToFirebaseStorage } from '$lib/server/firebase';
-import { getCustomerByIdFromFirebase, getFaceRecordByCustomerIdFromFirebase, recordSecurityIncidentInFirebase, recordFaceVerificationInFirebase } from '$lib/server/firebaseDb';
+import { createApprovalRequest } from '$lib/server/approvalDb';
+import { getCustomerByIdFromFirebase, getFaceRecordByCustomerIdFromFirebase, recordSecurityIncidentInFirebase, recordFaceVerificationInFirebase, getSecurityIncidentsFromFirebase, createComplaintInFirebase } from '$lib/server/firebaseDb';
 import { verifyFaceAuthentication } from '$lib/server/mlService';
 
 export const load: PageServerLoad = async ({ cookies }) => {
@@ -139,18 +140,50 @@ export const actions: Actions = {
                 status: 'UNAUTHORIZED_ATTEMPT'
             });
 
-            // 3. Dispatch Security Alert Email to ORIGINAL ACCOUNT OWNER'S REGISTERED EMAIL
-            await sendSecurityAlertEmail({
+            // Detect repeated attempts (e.g. >= 3 in last 24h)
+            const allIncidents = await getSecurityIncidentsFromFirebase();
+            const recentIncidents = allIncidents.filter(inc => 
+                inc.customerId === uidStr && 
+                new Date(inc.timestamp).getTime() > Date.now() - 24 * 60 * 60 * 1000
+            );
+
+            if (recentIncidents.length >= 3) {
+                await createComplaintInFirebase({
+                    customerId: uidStr,
+                    customerName: customer.fullName || customer.name || 'Customer',
+                    email: customer.email || '',
+                    category: 'Fraud & Security',
+                    subject: 'Multiple Unauthorized ATM Access Attempts',
+                    description: `Detected ${recentIncidents.length} unauthorized access attempts in the last 24 hours using card ${cardStr}.`,
+                    priority: 'URGENT'
+                });
+            }
+
+            // Create Approval Request
+            const tokenId = await createApprovalRequest({
+                customerId: uidStr,
+                cardNumber: cardStr,
+                attemptedImageUrl
+            });
+
+            const baseUrl = request.headers.get('origin') || 'http://localhost:5173';
+            const absoluteImageUrl = attemptedImageUrl.startsWith('/') 
+                ? `${baseUrl}${attemptedImageUrl}` 
+                : attemptedImageUrl;
+
+            // Dispatch Security Alert Email & Approval Link to ORIGINAL ACCOUNT OWNER
+            await sendMismatchApprovalEmail({
                 toEmail: customer.email || '',
                 ownerName: customer.fullName || customer.name || 'Customer',
                 cardNumber: cardStr,
-                failureReason,
-                timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+                attemptTime: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+                approvalToken: tokenId,
+                baseUrl: baseUrl,
+                attemptedImageUrl: absoluteImageUrl || photoDataUrl,
+                attemptedImageBase64: photoDataUrl
             });
 
-            return fail(401, { 
-                error: `Authentication Rejected: Face does not match registered account owner (${customer.fullName || customer.name}). A security alert has been dispatched to ${customer.email}.` 
-            });
+            throw redirect(303, `/atm/await-approval/${tokenId}`);
         }
     }
 } satisfies Actions;

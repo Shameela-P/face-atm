@@ -13,7 +13,7 @@
 
 	function openModal(type: 'withdraw' | 'deposit' | 'history' | 'balance') {
 		activeModal = type;
-		amount = '';
+		amount = data.authAmount ? data.authAmount.toString() : '';
 	}
 
 	function closeModal() {
@@ -222,24 +222,29 @@
 						min="100"
 						step="100"
 						required 
-						class="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-2xl font-mono text-center text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 transition-colors"
+						readonly={!!data.authAmount}
+						class="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-2xl font-mono text-center text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-50 read-only:opacity-50 read-only:cursor-not-allowed"
 					/>
 				</div>
 
-				<div>
-					<span class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Quick Presets</span>
-					<div class="grid grid-cols-3 gap-2">
-						{#each [500, 1000, 2000, 5000, 10000, 20000] as preset}
-							<button 
-								type="button" 
-								onclick={() => amount = preset.toString()} 
-								class="py-2.5 text-xs font-bold font-mono bg-slate-950 hover:bg-brand-500/20 hover:text-brand-400 text-slate-300 rounded-xl transition-colors border border-slate-800 hover:border-brand-500/30"
-							>
-								₹{preset.toLocaleString('en-IN')}
-							</button>
-						{/each}
+				{#if data.authAmount}
+					<p class="text-xs text-brand-400 font-semibold text-center">Amount locked to owner's exact authorization.</p>
+				{:else}
+					<div>
+						<span class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Quick Presets</span>
+						<div class="grid grid-cols-3 gap-2">
+							{#each [500, 1000, 2000, 5000, 10000, 20000] as preset}
+								<button 
+									type="button" 
+									onclick={() => amount = preset.toString()} 
+									class="py-2.5 text-xs font-bold font-mono bg-slate-950 hover:bg-brand-500/20 hover:text-brand-400 text-slate-300 rounded-xl transition-colors border border-slate-800 hover:border-brand-500/30"
+								>
+									₹{preset.toLocaleString('en-IN')}
+								</button>
+							{/each}
+						</div>
 					</div>
-				</div>
+				{/if}
 
 				<div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
 					<button type="button" onclick={closeModal} class="px-5 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold transition-colors">
@@ -308,9 +313,14 @@
 						min="100"
 						step="100"
 						required 
-						class="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-2xl font-mono text-center text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+						readonly={!!data.authAmount}
+						class="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3.5 text-2xl font-mono text-center text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition-colors disabled:opacity-50 read-only:opacity-50 read-only:cursor-not-allowed"
 					/>
 				</div>
+
+				{#if data.authAmount}
+					<p class="text-xs text-emerald-400 font-semibold text-center">Amount locked to owner's exact authorization.</p>
+				{/if}
 
 				<div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
 					<button type="button" onclick={closeModal} class="px-5 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold transition-colors">
@@ -394,7 +404,6 @@
 				<p class="text-lg font-medium text-emerald-400">{form.message}</p>
 			</div>
 			<div class="pt-8 space-y-2">
-				<p class="text-sm font-bold text-slate-300">Thank you for banking with SecureATM!</p>
 				<p class="text-xs text-slate-500 font-mono">Returning to main menu in 5 seconds...</p>
 			</div>
 		</div>

@@ -53,8 +53,8 @@ function downloadUrlFallback(base64DataUrl: string, storagePath: string): string
         }
         const filePath = path.join(localDir, filename);
         fs.writeFileSync(filePath, buffer);
-        return `https://firebasestorage.googleapis.com/v0/b/face-76a11.firebasestorage.app/o/${encodeURIComponent(storagePath)}?alt=media (local_backup: /uploads/${filename})`;
+        return `/uploads/${filename}`;
     } catch (e) {
-        return `gs://face-76a11.firebasestorage.app/${storagePath}`;
+        return '';
     }
 }

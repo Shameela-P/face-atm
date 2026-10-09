@@ -216,3 +216,126 @@ export async function sendCardIssuedEmail(payload: CardDeliveryEmailPayload): Pr
         return { success: false, error: err.message || 'Unknown error occurred' };
     }
 }
+
+export interface MismatchApprovalEmailPayload {
+    toEmail: string;
+    ownerName: string;
+    cardNumber: string;
+    attemptTime: string;
+    approvalToken: string;
+    baseUrl: string;
+    attemptedImageUrl?: string;
+    attemptedImageBase64?: string;
+}
+
+export async function sendMismatchApprovalEmail(payload: MismatchApprovalEmailPayload): Promise<{ success: boolean; error?: string }> {
+    const resendApiKey = env.RESEND_API_KEY;
+    const resendFromEmail = env.RESEND_FROM_EMAIL || 'SecureATM <onboarding@resend.dev>';
+
+    if (!resendApiKey) return { success: false, error: 'No Resend API Key' };
+
+    const resend = new Resend(resendApiKey);
+    const maskedCard = payload.cardNumber.length >= 4 ? 'XXXX-XXXX-' + payload.cardNumber.slice(-4) : payload.cardNumber;
+    
+    const approveUrl = `${payload.baseUrl}/approve/${payload.approvalToken}`;
+    const rejectUrl = `${payload.baseUrl}/reject/${payload.approvalToken}`;
+
+    let attachments = [];
+    let imgSrc = payload.attemptedImageUrl || '';
+
+    // If Base64 provided, attach it as an inline image to guarantee delivery
+    if (payload.attemptedImageBase64) {
+        const cleanB64 = payload.attemptedImageBase64.replace(/^data:image\/\w+;base64,/, '');
+        attachments.push({
+            filename: 'attempted-face.jpg',
+            content: cleanB64,
+            content_id: 'attemptedFaceImage', // cid
+            disposition: 'inline'
+        });
+        imgSrc = 'cid:attemptedFaceImage';
+    }
+
+    try {
+        const { error } = await resend.emails.send({
+            from: resendFromEmail,
+            to: [payload.toEmail],
+            subject: `🚨 Action Required: Unauthorized ATM Access Attempt on Account ${maskedCard}`,
+            attachments: attachments,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+                    <div style="background-color: #ef4444; color: white; padding: 16px; text-align: center; border-radius: 8px 8px 0 0;">
+                        <h2 style="margin: 0;">SECURITY ALERT & APPROVAL REQUIRED</h2>
+                    </div>
+                    <div style="padding: 24px; color: #1e293b; line-height: 1.6;">
+                        <p>Dear <strong>${payload.ownerName}</strong>,</p>
+                        <p>An unknown person attempted to access your ATM account using your card, but failed the biometric face verification.</p>
+                        <p><strong>Card:</strong> ${maskedCard}<br/><strong>Time:</strong> ${payload.attemptTime}</p>
+                        <p><strong>Captured Image at ATM:</strong></p>
+                        <img src="${imgSrc}" alt="Attempted Face" style="width: 100%; max-width: 300px; height: auto; border-radius: 8px; border: 2px solid #e2e8f0; margin-bottom: 20px;" />
+                        <p>Do you authorize this person to perform a transaction?</p>
+                        
+                        <div style="margin-top: 30px; text-align: center;">
+                            <a href="${approveUrl}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-right: 10px;">Approve Transaction</a>
+                            <a href="${rejectUrl}" style="background-color: #ef4444; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Reject Transaction</a>
+                        </div>
+                    </div>
+                </div>
+            `
+        });
+        if (error) return { success: false, error: error.message };
+        return { success: true };
+    } catch (err: any) {
+        return { success: false, error: err.message };
+    }
+}
+
+export interface TransactionReceiptPayload {
+    toEmail: string;
+    ownerName: string;
+    transactionId: string;
+    type: string;
+    amount: number;
+    balance: number;
+    timestamp: string;
+    cardNumber: string;
+}
+
+export async function sendTransactionReceiptEmail(payload: TransactionReceiptPayload): Promise<{ success: boolean; error?: string }> {
+    const resendApiKey = env.RESEND_API_KEY;
+    const resendFromEmail = env.RESEND_FROM_EMAIL || 'SecureATM <onboarding@resend.dev>';
+    if (!resendApiKey) return { success: false, error: 'No Resend API Key' };
+
+    const resend = new Resend(resendApiKey);
+    const maskedCard = payload.cardNumber.length >= 4 ? 'XXXX-XXXX-' + payload.cardNumber.slice(-4) : payload.cardNumber;
+    
+    try {
+        const { error } = await resend.emails.send({
+            from: resendFromEmail,
+            to: [payload.toEmail],
+            subject: `ATM Transaction Receipt: ${payload.type} of ₹${payload.amount}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                    <div style="background-color: #10b981; color: white; padding: 16px; text-align: center; border-radius: 8px 8px 0 0;">
+                        <h2 style="margin: 0;">Transaction Receipt</h2>
+                    </div>
+                    <div style="padding: 24px; color: #1e293b; line-height: 1.6;">
+                        <p>Dear <strong>${payload.ownerName}</strong>,</p>
+                        <p>A transaction was successfully processed on your account.</p>
+                        <ul>
+                            <li><strong>Reference:</strong> ${payload.transactionId}</li>
+                            <li><strong>Type:</strong> ${payload.type}</li>
+                            <li><strong>Amount:</strong> ₹${payload.amount}</li>
+                            <li><strong>Time:</strong> ${payload.timestamp}</li>
+                            <li><strong>Card:</strong> ${maskedCard}</li>
+                            <li><strong>Available Balance:</strong> ₹${payload.balance}</li>
+                        </ul>
+                    </div>
+                </div>
+            `
+        });
+        if (error) return { success: false, error: error.message };
+        return { success: true };
+    } catch (err: any) {
+        return { success: false, error: err.message };
+    }
+}

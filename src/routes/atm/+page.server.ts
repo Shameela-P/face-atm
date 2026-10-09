@@ -4,7 +4,8 @@ import { getCustomerByCardFromFirebase } from '$lib/server/firebaseDb';
 
 export const load: PageServerLoad = async ({ url }) => {
     return {
-        successMessage: url.searchParams.get('success') || null
+        successMessage: url.searchParams.get('success') || null,
+        errorMessage: url.searchParams.get('error') || null
     };
 };
 

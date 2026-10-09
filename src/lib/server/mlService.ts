@@ -3,8 +3,10 @@
  * Reads ML_SERVICE_URL from process.env with default fallback to http://localhost:8000.
  */
 
+import { env } from '$env/dynamic/private';
+
 export function getMlServiceUrl(): string {
-    return process.env.ML_SERVICE_URL || 'http://127.0.0.1:8000';
+    return env.ML_SERVICE_URL || process.env.ML_SERVICE_URL || 'http://127.0.0.1:8000';
 }
 
 export interface MlHealthResponse {
